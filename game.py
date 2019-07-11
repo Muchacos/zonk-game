@@ -3,9 +3,7 @@ from classes import *
 game_mode = Game()
 printer = Printer(game_mode)
 settings = printer.get_settings()
-player = settings[0]
-high_bar = settings[1]
-game_mode.set_settings(player, high_bar, printer)
+game_mode.set_settings(settings, printer)
 
 while game_mode.game_flag:
     turn_result = game_mode.turn()
