@@ -26,7 +26,6 @@ class Player:
 class Game:
     game_flag = True
     dices = [1]*6
-    COMBOS = {'[1, 2, 3, 4, 5, 6]': 1500, '[1, 2, 3, 4, 5]': 750}
 
     def __init__(self):
         pass
@@ -41,14 +40,19 @@ class Game:
             Game.game_flag = False
             self.printer._print_won()
 
-    def check_turn(self):
-        dices = Game.dices
-        flags = [False]*3
+    def check_combosRow(self, dices):
+        return Counter(dices).most_common()[0][1] >= 3
 
-        flags[0] = any(dice in (1, 5) for dice in dices)
-        flags[1] = Counter(dices).most_common()[0][1] >= 3
-        flags[2] = str(dices.sort()) in Game.COMBOS
-        return any(flags)
+    def check_combosRange(self, dices):
+        return all(d in dices for d in range(1, 6))
+
+    def check_combosSingle(self, dices):
+        return any(d in dices for d in (1, 5))
+
+    def check_turn(self):
+        d = Game.dices
+        return any((self.check_combosRow(d), self.check_combosRange(d),
+                   self.check_combosSingle(d)))
 
     def add_dices(self):
         Game.dices.extend([1]*(6 - len(Game.dices)))
@@ -71,51 +75,54 @@ class Game:
             self.player.remove_scoreturn()
             return False
 
-        while True:
+        curr_score = 0
+
+        while curr_score == 0:
             hand = printer.get_dicechoose()
-            curr_score = 0
 
-            if len(hand) >= 3 and all(dice == hand[0] for dice in hand):
-                k = 0
-                for dice in hand:
-                    if k == 0 and dice == 1:
-                        curr_score += 1000
-                    elif k == 0:
-                        curr_score += dice*100
-                    elif k > 3:
-                        curr_score *= 2
-                    k += 1
-                    Game.dices.remove(dice)
-                break
+            if self.check_combosRange(hand):
+                if 6 in hand:
+                    curr_score += 1500
+                    hand.clear()
+                    Game.dices.clear()
+                else:
+                    curr_score += 750
+                    for i in range(1, 6):
+                        hand.remove(i)
+                        Game.dices.remove(i)
 
-            elif len(hand) in range(1, 4) and all(dice in (1, 5) for dice in hand):
-                for dice in hand:
+            if self.check_combosRow(hand):
+                for dice in hand[:]:
+                    score = 0
+                    row_len = hand.count(dice)
 
-                    if dice == 0:
-                        printer._print_scoreturn()
-                        self.player.add_scoretotal()
-                        printer._print_scoretotal()
-                        self.check_win()
-                        return False
+                    if row_len >= 3:
+                        if dice == 1:
+                            score += 1000
+                        else:
+                            score += dice*100
+                        score *= 2**(row_len - 3)
+                        curr_score += score
 
-                    elif dice == 1:
+                        for i in range(row_len):
+                            hand.remove(dice)
+                            Game.dices.remove(dice)
+
+            if self.check_combosSingle(hand):
+                for dice in hand[:]:
+
+                    if dice == 1:
                         curr_score += 100
+                        hand.remove(dice)
                         Game.dices.remove(dice)
 
                     elif dice == 5:
                         curr_score += 50
+                        hand.remove(dice)
                         Game.dices.remove(dice)
-                break
 
-            elif str(hand.sort()) in Game.COMBOS:
-                curr_score += COMBOS[hand]
-                for dice in hand:
-                    Game.dices.remove(dice)
-                break
-
-            else:
-                curr_score = 0
-                printer._print_wrongdice()
+            if len(hand) > 0:
+                printer._print_noPoints(hand)
 
         player.add_scoreturn(curr_score)
         printer._print_scoreearned(curr_score)
@@ -151,7 +158,7 @@ class Printer:
             if inp.isdigit() and all(inp.count(dice) <= dices.count(int(dice)) for dice in inp):
                 return [int(dice) for dice in inp]
             else:
-                self._print_wrongdice()
+                self._print_cannotPick()
 
     def get_nextturn(self):
         print('\nContunue?')
@@ -171,10 +178,9 @@ class Printer:
         print(gm.player.name, ', your Turn!')
 
     def _print_dices(self, dices):
-        str = ''
         for i in range(len(dices)):
-            str += '[%d] ' % dices[i]
-        print(str)
+            print('[%d] ' % dices[i], end=' ')
+        print('\n')
 
     def _print_scoreturn(self):
         print('Turn score:', self.game_mode.player.score_turn)
@@ -190,8 +196,14 @@ class Printer:
         print('No dices to pick!\n')
         print('-------------------------------')
 
-    def _print_wrongdice(self):
-        print('You can\'t pick this/those dice(s)!')
+    def _print_noPoints(self, dices):
+        print('These dices do not give you points:', end=' ')
+        for d in dices:
+            print('[%s]' % d, end=' ')
+        print('\n')
+
+    def _print_cannotPick(self):
+        print('You cannot pick these dices!')
 
     def _print_won(self):
         print('CONGRATS! YOU WON!')
