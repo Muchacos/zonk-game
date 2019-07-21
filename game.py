@@ -1,11 +1,13 @@
-from classes import *
+from classes import Game, Printer
 
 game_mode = Game()
 printer = Printer(game_mode)
-settings = printer.get_settings()
-game_mode.set_settings(settings, printer)
+player = printer.get_player()
+game_mode.set_settings(player, printer.get_highbar(), printer)
 
+# Основной цикл игры
 while game_mode.game_flag:
-    turn_result = game_mode.turn()
-    if turn_result is False or len(game_mode.dices) == 0:
+    # Совершение дейстие в ход. Выясняется, нужно ли добавить кости
+    need_dices = game_mode.action()
+    if need_dices is True:
         game_mode.add_dices()
