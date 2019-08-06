@@ -1,35 +1,6 @@
 import random
 
 
-class Player:
-    ''' Представляет игрока.
-
-        Поля экземпляра:
-        name -- имя игрока
-        score_total -- итоговое число очков
-        score_turn -- число очков за ход
-
-    '''
-
-    def __init__(self, name):
-        self.name = name
-        self.score_total = 0
-        self.score_turn = 0
-
-    def add_scoretotal(self):
-        '''Добавляет score_turn к score_total.'''
-        self.score_total += self.score_turn
-        self.score_turn = 0
-
-    def add_scoreturn(self, score):
-        '''Увеличивает score_turn на значение score.'''
-        self.score_turn += score
-
-    def clear_scoreturn(self):
-        '''Отчищает score_turn (очки за ход)'''
-        self.score_turn = 0
-
-
 class Game:
     '''Представляет основной функционал игры.
 
@@ -64,24 +35,29 @@ class Game:
     '''
 
     game_flag = True
+    printer = None
     dices = [1]*6
 
     def __init__(self):
         pass
 
-    def set_settings(self, player, high_bar, printer):
+    def set_settings(self, player, second_player, high_bar, printer):
         '''Принимает список с настройками и Printer игры, устанавливая их
         в поля экземпляров.'''
         self.player = player
+        self.second_player = second_player
         self.high_bar = high_bar
-        self.printer = printer
+        Game.printer = printer
+
+    def switch_player(self):
+        self.player, self.second_player = self.second_player, self.player
 
     def check_win(self):
         '''Сравнивая очки игрока с очками для победы, опускает game_flag в
         случае выйгрыша'''
         if self.player.score_total >= self.high_bar:
             Game.game_flag = False
-            self.printer.print_won()
+            Game.printer.print_won()
 
     def check_combosrow(self, dices):
         '''Возвращает True, если среди костей есть >= 3-х костей с
@@ -109,27 +85,30 @@ class Game:
         Game.dices.extend([1]*(6 - len(Game.dices)))
 
     def action(self):
-        '''Совершение действия в ход. Возвращает True/False:
+        '''Совершение действия в ход. Возвращает исход действия в числе:
+
+        Отрицательные значения (-1, -2) означают, что ход должен передасться
+        другому игроку. Положительные - ход не передается.
 
         Кости НЕ добавятся в сдедуюищй ход (возвращает False) если:
-        - игрок совершил действие и продолжает ход (кости еще остались)
-        - игра уже закончена
+        0 - игра уже закончена
+        1 - игрок совершил действие и продолжает ход (кости еще остались)
 
         Кости добавляются (возвращает True) если:
-        - игрок не может совешить действие т.к. выпавшие кости не приносят
+        2 - игрок совершил действие и продолжает ход, но кости закончились
+        -1 - игрок не может совешить действие т.к. выпавшие кости не приносят
           очков. Ход заканчивается
-        - игрок совершил действие и заканчивает ход
-        - игрок совершил действие и продолжает ход, но кости закончились
+        -2 - игрок совершил действие и заканчивает ход
 
         '''
 
-        printer = self.printer
+        printer = Game.printer
         player = self.player
 
         # Проверка не закончена ли игра
         if Game.game_flag is False:
             printer.print_gameend()
-            return False
+            return 0
 
         # Установка рандомных значений для имеющихся костей
         for i in range(len(Game.dices)):
@@ -143,7 +122,7 @@ class Game:
         if self.check_action() is False:
             printer.print_nodices()
             self.player.clear_scoreturn()
-            return True
+            return -1
 
         # Инициализация текущих очков за текущее действие
         action_score = 0
@@ -151,8 +130,8 @@ class Game:
         # Цикл, повторяющийся до тех пор, пока игрок не совершит дейстие,
         # приносящее очки.
         while action_score == 0:
-            # Игрок берет в 'руку' какие-то выпавшие кости
-            hand = printer.get_dicechoose()
+            # ИИ/Человек берет в 'руку' какие-то выпавшие кости
+            hand = player.get_dicechoose(Game.dices)
             # Происходят проверки на комбинации в руке, приносящие очки (поря-
             # док имеет значение!). Кости, приносящие очки, удаляются из руки
             # и из основного списка костей класса Game.
@@ -210,29 +189,113 @@ class Game:
         printer.print_scoreturn()
 
         # Проверка, хочет ли игрок закончить ход и сохранить набранные очки
-        if printer.get_nextaction() is False:
+        if player.get_nextaction() is False:
             self.player.add_scoretotal()
             printer.print_scoretotal()
             self.check_win()
-            return True
+            return -2
         # Если ход продолжается, происходи проверка, остались ли еще кости
         elif len(Game.dices) == 0:
-            return True
+            return 2
         else:
-            return False
+            return 1
+
+
+class Player():
+    ''' Представляет родительский класс игрока.
+
+        Поля класса:
+        game_mode -- основной функционал игры
+        printer -- инструмент для ввода/вывода данных
+
+        Поля экземпляра:
+        name -- имя игрока
+        score_total -- итоговое число очков
+        score_turn -- число очков за ход
+
+    '''
+
+    game_mode = None
+    printer = None
+
+    def __init__(self, game_mode, printer, name):
+        Player.game_mode = game_mode
+        Player.printer = printer
+        self.name = name
+        self.score_total = 0
+        self.score_turn = 0
+
+    def add_scoretotal(self):
+        '''Добавляет score_turn к score_total.'''
+        self.score_total += self.score_turn
+        self.score_turn = 0
+
+    def add_scoreturn(self, score):
+        '''Увеличивает score_turn на значение score.'''
+        self.score_turn += score
+
+    def clear_scoreturn(self):
+        '''Отчищает score_turn (очки за ход)'''
+        self.score_turn = 0
+
+
+class Human(Player):
+    """Представляет игрока по ту сторону экрана.
+
+    """
+
+    def get_dicechoose(self, dices):
+        '''Возвращает выбранные игроком кости, если те существуют'''
+        while True:
+            inp = input('> ')
+            # Проверка, есть ли все выбранные кости среди выпавших костей
+            if (inp.isdigit() and
+               all(inp.count(d) <= dices.count(int(d)) for d in inp)):
+                return [int(d) for d in inp]
+            else:
+                Player.printer.print_cannotpick()
+
+    def get_nextaction(self):
+        '''Узнает, готов ли игрок рискнуть продолжить ход (y/n)'''
+        print('\nContunue?')
+        while True:
+            inp = input('> ')
+
+            if inp == 'y':
+                return True
+            elif inp == 'n':
+                return False
+            else:
+                print('Wrong answer')
+
+
+class Robot(Player):
+    """Представляет ИИ.
+
+    """
+
+    def get_dicechoose(self, dices):
+        '''Возвращает выбранные ИИ кости'''
+        claw = [random.choice(dices)]
+        Player.printer.print_robotpick(claw)
+        return claw
+
+    def get_nextaction(self):
+        '''Узнает, готов ли робот рискнуть продолжить ход (y/n)'''
+        choice = random.choice([True, False])
+        Player.printer.print_robotactionchoice(choice)
+        return choice
 
 
 class Printer:
-    '''Представляет инструмент для вывода сообщений и получения данных.
+    '''Представляет инструмент для вывода сообщений и получения
+        пользовательского ввода.
 
     Поля экземпляра:
     game_mode -- экземпляр класса Game с основным функционалам игры
 
     Методы класса:
-    get_settings -- получет настройки из пользовательского ввода и возвращает
-                    их в списке
-    get_dicechoose -- возвращает выбранные игроком кости
-    get_nextaction -- возращает True, если игрок готов продолжить ход
+    input_*something* -- возвращает пользовательский ввод в объекте *something*
     print_*something* -- выводит на экран различные сообщения
 
     '''
@@ -240,14 +303,14 @@ class Printer:
     def __init__(self, game_mode):
         self.game_mode = game_mode
 
-    def get_player(self):
+    def input_player(self):
         '''Создает и возвращает игрока'''
         print('Welcome to the game! What is your name?')
-        player = Player(input('> '))
+        player = Human(self.game_mode, self, name=input('> '))
         print('Ok... let me write it down... yep.')
         return player
 
-    def get_highbar(self):
+    def input_highbar(self):
         '''Получет и выводит число очков для победы'''
         high_bar = 0
         print('Now, choose a maximum fo points.')
@@ -266,31 +329,6 @@ class Printer:
                     break
         print('Great, we can start!')
         return high_bar
-
-    def get_dicechoose(self):
-        '''Возвращает в списке выбранные игроком кости, если те существуют'''
-        dices = self.game_mode.dices
-        while True:
-            inp = input('> ')
-            # Проверка, есть ли все выбранные кости среди выпавших костей
-            if (inp.isdigit() and
-               all(inp.count(d) <= dices.count(int(d)) for d in inp)):
-                return [int(d) for d in inp]
-            else:
-                self.print_cannotpick()
-
-    def get_nextaction(self):
-        '''Узнает, готов ли игрок рискнуть продолжить ход (y/n)'''
-        print('\nContunue?')
-        while True:
-            inp = input('> ')
-
-            if inp == 'n':
-                return False
-            elif inp == 'y':
-                return True
-            else:
-                print('Wrong answer')
 
     def print_turnstart(self):
         gm = self.game_mode
@@ -324,6 +362,19 @@ class Printer:
 
     def print_cannotpick(self):
         print('You cannot pick these dices!')
+
+    def print_robotpick(self, pick):
+        print('Robot was picked: ', end='')
+        for d in pick:
+            print('[%s]' % d, end=' ')
+        print('\n')
+
+    def print_robotactionchoice(self, choice):
+        print('Робот решил ', end='')
+        if choice is True:
+            print('продолжить ход')
+        else:
+            print('закончить ход')
 
     def print_won(self):
         print('CONGRATS! YOU WON!')
