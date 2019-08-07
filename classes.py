@@ -1,4 +1,5 @@
 import random
+import tools
 
 
 class Game:
@@ -48,9 +49,12 @@ class Game:
         self.second_player = second_player
         self.high_bar = high_bar
         Game.printer = printer
+        Game.printer.print_robothello()
+        Game.printer.print_gamestart()
 
     def switch_player(self):
         self.player, self.second_player = self.second_player, self.player
+        Game.printer.print_turnstart()
 
     def check_win(self):
         '''Сравнивая очки игрока с очками для победы, опускает game_flag в
@@ -131,7 +135,7 @@ class Game:
         # приносящее очки.
         while action_score == 0:
             # ИИ/Человек берет в 'руку' какие-то выпавшие кости
-            hand = player.get_dicechoose(Game.dices)
+            hand = player.get_dicechoose()
             # Происходят проверки на комбинации в руке, приносящие очки (поря-
             # док имеет значение!). Кости, приносящие очки, удаляются из руки
             # и из основного списка костей класса Game.
@@ -201,7 +205,7 @@ class Game:
             return 1
 
 
-class Player():
+class Player:
     ''' Представляет родительский класс игрока.
 
         Поля класса:
@@ -244,8 +248,9 @@ class Human(Player):
 
     """
 
-    def get_dicechoose(self, dices):
+    def get_dicechoose(self):
         '''Возвращает выбранные игроком кости, если те существуют'''
+        dices = Player.game_mode.dices
         while True:
             inp = input('> ')
             # Проверка, есть ли все выбранные кости среди выпавших костей
@@ -274,15 +279,36 @@ class Robot(Player):
 
     """
 
-    def get_dicechoose(self, dices):
+    def get_dicechoose(self):
         '''Возвращает выбранные ИИ кости'''
-        claw = [random.choice(dices)]
+        gm = Player.game_mode
+        dices = gm.dices[:]
+        claw = []
+
+        if gm.check_combosrange(dices):
+            if 6 in dices:
+                claw = list(range(1, 7))
+                dices.clear()
+            else:
+                for d in range(1, 6):
+                    claw.append(d)
+                    dices.remove(d)
+
+        elif gm.check_combosrow(dices):
+            for d in gm.dices:
+                if gm.dices.count(d) >= 3:
+                    claw.append(d)
+                    dices.remove(d)
+
+        if gm.check_combossingle(dices):
+            claw.extend([d for d in dices if d in (1, 5)])
+
         Player.printer.print_robotpick(claw)
         return claw
 
     def get_nextaction(self):
         '''Узнает, готов ли робот рискнуть продолжить ход (y/n)'''
-        choice = random.choice([True, False])
+        choice = tools.randchance(80)
         Player.printer.print_robotactionchoice(choice)
         return choice
 
@@ -327,13 +353,15 @@ class Printer:
                     continue
                 else:
                     break
-        print('Great, we can start!')
         return high_bar
+
+    def print_gamestart(self):
+        print('Great! We can start')
 
     def print_turnstart(self):
         gm = self.game_mode
         print('------------------------------')
-        print(gm.player.name, ', your Turn!')
+        print('%s\'s turn!' % gm.player.name)
 
     def print_dices(self, dices):
         for i in range(len(dices)):
@@ -341,18 +369,19 @@ class Printer:
         print('\n')
 
     def print_scoreturn(self):
-        print('Turn score:', self.game_mode.player.score_turn)
+        player = self.game_mode.player
+        print('%s\'s score: %d' % (player.name, player.score_turn))
 
     def print_scoretotal(self):
-        score = self.game_mode.player.score_total
-        print('Total score:', score)
+        player = self.game_mode.player
+        print('%s\'s total score: %d' % (player.name, player.score_total))
 
     def print_scoreearned(self, score):
-        print('You earned %d points!' % score)
+        player_name = self.game_mode.player.name
+        print('%s was earned %d points!' % (player_name, score))
 
     def print_nodices(self):
-        print('No dices to pick!\n')
-        print('-------------------------------\n')
+        print('No dices to pick!')
 
     def print_nopoints(self, dices):
         print('These dices do not give you points:', end=' ')
@@ -363,6 +392,10 @@ class Printer:
     def print_cannotpick(self):
         print('You cannot pick these dices!')
 
+    def print_robothello(self):
+        robot_name = self.game_mode.second_player.name
+        print('Your enemy is %s' % robot_name)
+
     def print_robotpick(self, pick):
         print('Robot was picked: ', end='')
         for d in pick:
@@ -370,14 +403,15 @@ class Printer:
         print('\n')
 
     def print_robotactionchoice(self, choice):
-        print('Робот решил ', end='')
+        print('Robot choosed to ', end='')
         if choice is True:
-            print('продолжить ход')
+            print('continue his turn')
         else:
-            print('закончить ход')
+            print('end his turn')
 
     def print_won(self):
-        print('CONGRATS! YOU WON!')
+        player_name = self.game_mode.player.name
+        print('CONGRATS, %s!. YOU WON!' % player_name)
 
     def print_gameend(self):
-        print('Game alrady end')
+        print('Game was alrady end')

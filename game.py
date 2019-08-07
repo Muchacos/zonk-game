@@ -13,5 +13,5 @@ while game_mode.game_flag:
     action_result = game_mode.action()
     if action_result in (-2, -1, 2):
         game_mode.add_dices()
-    if action_result < 0:
+    if action_result < 0 and game_mode.game_flag is True:
         game_mode.switch_player()
