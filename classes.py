@@ -279,29 +279,109 @@ class Robot(Player):
 
     """
 
+    def take_range(self, dices, claw):
+        '''Забирает в клешню наибольший диапазон костей'''
+        if 6 in dices:
+            claw = list(range(1, 7))
+            dices.clear()
+        else:
+            for d in range(1, 6):
+                claw.append(d)
+                dices.remove(d)
+
+    def take_row(self, dices, claw):
+        '''Забирает в клешню наибольший(ые) ряд(ы) костей'''
+        gm = Player.game_mode
+        for d in gm.dices:
+            if gm.dices.count(d) >= 3:
+                claw.append(d)
+                dices.remove(d)
+
+    def take_single(self, dices, claw, amount=0, specific=0):
+        '''Забирает в клешню единичные кости по установленным параметрам:
+
+            amount -- кол-во костей (0 = все)
+            specific -- конкретная кость, 1 или 5 (0 = любая)
+
+        '''
+        gm = Player.game_mode
+
+        if amount == 0 and specific == 0:
+            for d in gm.dices:
+                if d in (1, 5):
+                    claw.append(d)
+                    dices.remove(d)
+
+        elif amount == 0 and specific != 0:
+            for d in gm.dices:
+                if d == specific:
+                    claw.append(d)
+                    dices.remove(d)
+
+        elif amount != 0 and specific == 0:
+            # Если подходял любые кости, но нужно их определенное количество,
+            # то сначала забираются единицы, т.к. они приносят больше очков.
+            for i in (1, 5):
+                for d in gm.dices:
+                    if amount == 0:
+                        break
+                    if d == i:
+                        claw.append(d)
+                        dices.remove(d)
+                        amount -= 1
+
+        elif amount != 0 and specific != 0:
+            for d in gm.dices:
+                if amount == 0:
+                    break
+                if d == specific:
+                    claw.append(d)
+                    dices.remove(d)
+                    amount -= 1
+
     def get_dicechoose(self):
         '''Возвращает выбранные ИИ кости'''
         gm = Player.game_mode
         dices = gm.dices[:]
         claw = []
+        singles = dices.count(1) + dices.count(5)  # кол-во единичных костей
 
+        # Если есть диапазон костей, то забираем его
         if gm.check_combosrange(dices):
-            if 6 in dices:
-                claw = list(range(1, 7))
-                dices.clear()
-            else:
-                for d in range(1, 6):
-                    claw.append(d)
-                    dices.remove(d)
+            self.take_range(dices, claw)
+            # Если остались еще кости, то забираем их
+            if gm.check_combossingle(dices):
+                self.take_single(dices, claw)
 
+        # Если есть ряд костей, то забрать весь (все) ряд(ы)
         elif gm.check_combosrow(dices):
-            for d in gm.dices:
-                if gm.dices.count(d) >= 3:
-                    claw.append(d)
-                    dices.remove(d)
+            self.take_row(dices, claw)
+            # Если остались еще кости, то забирем их с шансом 50%
+            if gm.check_combossingle(dices) and tools.randchance(50):
+                self.take_single(dices, claw)
 
-        if gm.check_combossingle(dices):
-            claw.extend([d for d in dices if d in (1, 5)])
+        # Забирам все единичные кости, если остались только они
+        elif singles == len(dices):
+            self.take_single(dices, claw)
+
+        # Если костей больше трех, то забираем одну с шансом 75% или все
+        elif len(dices) > 3:
+            if tools.randchance(75) or singles == 1:
+                self.take_single(dices, claw, 1)
+            else:
+                self.take_range(dices, claw)
+
+        # Если кости три или меньше, то забираем все с шансом 75% или одну
+        elif len(dices) <= 3:
+            if singles > 1 and tools.randchance(75):
+                self.take_range(dices, claw)
+            else:
+                self.take_single(dices, claw, 1)
+
+        # Отладка непредвиденного случая
+        else:
+            print('!НЕПРЕДВИДЕННЫЙ СЛУЧАЙ СБОРА КОСТЕЙ!')
+            self.take_single(dices, claw)
 
         Player.printer.print_robotpick(claw)
         return claw
