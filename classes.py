@@ -66,7 +66,7 @@ class Game:
     def check_combosrow(self, dices):
         '''Возвращает True, если среди костей есть >= 3-х костей с
         одинаковыми значениями'''
-        return any(dices.count(dice) >= 3 for dice in dices)
+        return any(dices.count(d) >= 3 for d in dices)
 
     def check_combosrange(self, dices):
         '''Возвращает True, если среди костей есть все кости от 1 до 5'''
@@ -280,9 +280,9 @@ class Robot(Player):
     """
 
     def take_range(self, dices, claw):
-        '''Забирает в клешню наибольший диапазон костей'''
+        '''Забирает в claw наибольший диапазон костей'''
         if 6 in dices:
-            claw = list(range(1, 7))
+            claw.extend(range(1, 7))
             dices.clear()
         else:
             for d in range(1, 6):
@@ -290,51 +290,21 @@ class Robot(Player):
                 dices.remove(d)
 
     def take_row(self, dices, claw):
-        '''Забирает в клешню наибольший(ые) ряд(ы) костей'''
+        '''Забирает в claw наибольший(ые) ряд(ы) костей'''
         gm = Player.game_mode
         for d in gm.dices:
             if gm.dices.count(d) >= 3:
                 claw.append(d)
                 dices.remove(d)
 
-    def take_single(self, dices, claw, amount=0, specific=0):
-        '''Забирает в клешню единичные кости по установленным параметрам:
-
-            amount -- кол-во костей (0 = все)
-            specific -- конкретная кость, 1 или 5 (0 = любая)
-
-        '''
-        gm = Player.game_mode
-
-        if amount == 0 and specific == 0:
-            for d in gm.dices:
-                if d in (1, 5):
-                    claw.append(d)
-                    dices.remove(d)
-
-        elif amount == 0 and specific != 0:
-            for d in gm.dices:
-                if d == specific:
-                    claw.append(d)
-                    dices.remove(d)
-
-        elif amount != 0 and specific == 0:
-            # Если подходял любые кости, но нужно их определенное количество,
-            # то сначала забираются единицы, т.к. они приносят больше очков.
-            for i in (1, 5):
-                for d in gm.dices:
-                    if amount == 0:
-                        break
-                    if d == i:
-                        claw.append(d)
-                        dices.remove(d)
-                        amount -= 1
-
-        elif amount != 0 and specific != 0:
-            for d in gm.dices:
+    def take_single(self, dices, claw, amount=4):
+        '''Забирает в claw единичные кости. amount - количество (0 = все)'''
+        # По умолчанию amount = 4, т.к. это максимальное число единичных косей
+        for i in (1, 5):  # Сначала забираются кости со значением '1'
+            for d in dices[:]:
                 if amount == 0:
                     break
-                if d == specific:
+                if d == i:
                     claw.append(d)
                     dices.remove(d)
                     amount -= 1
@@ -356,9 +326,13 @@ class Robot(Player):
         # Если есть ряд костей, то забрать весь (все) ряд(ы)
         elif gm.check_combosrow(dices):
             self.take_row(dices, claw)
-            # Если остались еще кости, то забирем их с шансом 50%
-            if gm.check_combossingle(dices) and tools.randchance(50):
-                self.take_single(dices, claw)
+            # Если еще остались единичные кости
+            if gm.check_combossingle(dices):
+                # Забирам их при условии, что всего косей меньше трех
+                # (+ шанс 60%) или с шансом 25%.
+                if (len(dices) < 3 and tools.randchance(60) or
+                   tools.randchance(25)):
+                    self.take_single(dices, claw)
 
         # Забирам все единичные кости, если остались только они
         elif singles == len(dices):
@@ -369,16 +343,16 @@ class Robot(Player):
             if tools.randchance(75) or singles == 1:
                 self.take_single(dices, claw, 1)
             else:
-                self.take_range(dices, claw)
+                self.take_single(dices, claw)
 
         # Если кости три или меньше, то забираем все с шансом 75% или одну
         elif len(dices) <= 3:
             if singles > 1 and tools.randchance(75):
-                self.take_range(dices, claw)
+                self.take_single(dices, claw)
             else:
                 self.take_single(dices, claw, 1)
 
-        # Отладка непредвиденного случая
+        # ОТЛАДКА непредвиденного случая
         else:
             print('!НЕПРЕДВИДЕННЫЙ СЛУЧАЙ СБОРА КОСТЕЙ!')
             self.take_single(dices, claw)
@@ -387,9 +361,38 @@ class Robot(Player):
         return claw
 
     def get_nextaction(self):
-        '''Узнает, готов ли робот рискнуть продолжить ход (y/n)'''
-        choice = tools.randchance(80)
+        '''Узнает, готов ли робот рискнуть продолжить ход'''
+
+        # Возвращает шанс продолжить ход по графику y = -2.5(x-200)^1/2 + 100
+        def chance_curve(x):
+            if x < 200:
+                y = 100
+            elif x > 1800:
+                y = 0
+            else:
+                y = round(-2.5*(x-200)**(1/2)+100)
+            return y
+
+        dices = Player.game_mode.dices
+        chance_to_continue = chance_curve(self.score_turn)
+        # После вычисления шанса по формуле, рассматриваются нюансы, увеличива-
+        # ющие или уменьшающие риск потерять накопленные очки. Они увеличивают,
+        # либо уменьшают шанс продолжить ход:
+
+        # Если текущее кол-во очнов больше кол-ва очков для победы, то
+        # продолжать ход и рисковать не имеет смысла.
+        if self.score_total + self.score_turn >= Player.game_mode.high_bar:
+            chance_to_continue = 0
+        elif len(dices) == 0:
+            chance_to_continue += 90
+        elif len(dices) == 5:
+            chance_to_continue += 30
+        elif len(dices) < 3:
+            chance_to_continue -= 30
+
+        choice = tools.randchance(chance_to_continue)
         Player.printer.print_robotactionchoice(choice)
+        print('ШАНС:', chance_to_continue)  # ОТЛАДКА
         return choice
 
 
