@@ -31,7 +31,7 @@ class Game:
     check_combosrange,
     check_combossingle) -- проверка разных комбинаций
     add_dices -- добавляет кости
-    action -- основной функционал хода
+    action -- основной функционал действия
 
     '''
 
@@ -43,8 +43,7 @@ class Game:
         pass
 
     def set_settings(self, player, second_player, high_bar, printer):
-        '''Принимает список с настройками и Printer игры, устанавливая их
-        в поля экземпляров.'''
+        '''Принимает настройки и Printer игры, записывая их game mode'''
         self.player = player
         self.second_player = second_player
         self.high_bar = high_bar
@@ -57,15 +56,14 @@ class Game:
         Game.printer.print_turnstart()
 
     def check_win(self):
-        '''Сравнивая очки игрока с очками для победы, опускает game_flag в
-        случае выйгрыша'''
+        '''Опускает game_flag в случае выйгрыша текущего игрока'''
         if self.player.score_total >= self.high_bar:
             Game.game_flag = False
             Game.printer.print_won()
 
     def check_combosrow(self, dices):
-        '''Возвращает True, если среди костей есть >= 3-х костей с
-        одинаковыми значениями'''
+        '''Возвращает True, если среди костей есть >= 3 кости с одинаковыми
+        значениями'''
         return any(dices.count(d) >= 3 for d in dices)
 
     def check_combosrange(self, dices):
@@ -78,7 +76,7 @@ class Game:
         return any(d in dices for d in (1, 5))
 
     def check_action(self):
-        '''Возвращает True, если среди костей есть хотя бы одна комбинация
+        '''Возвращает True, если среди костей есть хотя бы одна комбинация,
         приносящая очки'''
         d = Game.dices
         return any((self.check_combosrow(d), self.check_combosrange(d),
@@ -246,6 +244,10 @@ class Player:
 class Human(Player):
     """Представляет игрока по ту сторону экрана.
 
+    Методы:
+    get_dicechoose -- получает ввод от игрока с выбранными костями
+    get_nextaction -- получает ввод от игрока, хочет ли он продолжить ход
+
     """
 
     def get_dicechoose(self):
@@ -277,6 +279,11 @@ class Human(Player):
 class Robot(Player):
     """Представляет ИИ.
 
+    Методы:
+    take_*dicecombo* -- взятие роботом определенной комбинации костей
+    get_dicechoose -- интеллектуальный выбор роботом выпавших костей
+    get_nextaction -- интеллектуальный выбор роботом прололжать ход или нет
+
     """
 
     def take_range(self, dices, claw):
@@ -290,7 +297,7 @@ class Robot(Player):
                 dices.remove(d)
 
     def take_row(self, dices, claw):
-        '''Забирает в claw наибольший(ые) ряд(ы) костей'''
+        '''Забирает в claw ряд(ы) костей'''
         gm = Player.game_mode
         for d in gm.dices:
             if gm.dices.count(d) >= 3:
@@ -298,7 +305,7 @@ class Robot(Player):
                 dices.remove(d)
 
     def take_single(self, dices, claw, amount=4):
-        '''Забирает в claw единичные кости. amount - количество (0 = все)'''
+        '''Забирает в claw единичные кости, где amount - количество'''
         # По умолчанию amount = 4, т.к. это максимальное число единичных косей
         for i in (1, 5):  # Сначала забираются кости со значением '1'
             for d in dices[:]:
@@ -362,7 +369,6 @@ class Robot(Player):
 
     def get_nextaction(self):
         '''Узнает, готов ли робот рискнуть продолжить ход'''
-
         # Возвращает шанс продолжить ход по графику y = -2.5(x-200)^1/2 + 100
         def chance_curve(x):
             if x < 200:
