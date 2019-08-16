@@ -20,8 +20,7 @@ class Game:
     Поля экземпляров:
     player -- основной игрок (экземпляр класса Player)
     high_bar -- цел. значение очков необходимых для победы
-    printer -- экземпляр класса Printer, использующийся для вывода/получения
-               сообщений/информации
+    screen -- экземпляр класса Screen, представляющий экран игры
 
     Методы:
     set_settings -- делает то, что указано в названии
@@ -36,30 +35,30 @@ class Game:
     '''
 
     game_flag = True
-    printer = None
+    screen = None
     dices = [1]*6
 
     def __init__(self):
         pass
 
-    def set_settings(self, player, second_player, high_bar, printer):
-        '''Принимает настройки и Printer игры, записывая их game mode'''
+    def set_settings(self, player, second_player, high_bar, screen):
+        '''Принимает настройки и Screen игры, записывая их в поля'''
         self.player = player
         self.second_player = second_player
         self.high_bar = high_bar
-        Game.printer = printer
-        Game.printer.print_robothello()
-        Game.printer.print_gamestart()
+        Game.screen = screen
+        screen.display_msg('13_enemy', 1, second_player.name)
+        screen.display_msg('05_start', 1)
 
     def switch_player(self):
         self.player, self.second_player = self.second_player, self.player
-        Game.printer.print_turnstart()
+        Game.screen.display_msg('06_whoturn', 1, self.player.name)
 
     def check_win(self):
         '''Опускает game_flag в случае выйгрыша текущего игрока'''
         if self.player.score_total >= self.high_bar:
             Game.game_flag = False
-            Game.printer.print_won()
+            Game.screen.display_msg('16_won', 5, self.player.name)
 
     def check_combosrow(self, dices):
         '''Возвращает True, если среди костей есть >= 3 кости с одинаковыми
@@ -104,26 +103,27 @@ class Game:
 
         '''
 
-        printer = Game.printer
+        screen = Game.screen
         player = self.player
 
         # Проверка не закончена ли игра
         if Game.game_flag is False:
-            printer.print_gameend()
+            screen.display_msg('17_gmend', 3)
             return 0
 
         # Установка рандомных значений для имеющихся костей
         for i in range(len(Game.dices)):
             Game.dices[i] = random.randint(1, 6)
 
-        # Выводим на экран выпавшие кости
-        printer.print_dices(Game.dices)
+        # Выводим на экран выпавшие кости и предлагает выбрать какие-то из них
+        screen.display_dices(Game.dices)
+        screen.display_msg('20_dicechoose', 0.1)
 
         # Проверк может ли игрок совершить действие. Если нет, ход заканчива-
         # ется автоматически, и игрок теряет очки.
         if self.check_action() is False:
-            printer.print_nodices()
-            self.player.clear_scoreturn()
+            screen.display_msg('10_nodice', 3)
+            player.clear_scoreturn()
             return -1
 
         # Инициализация текущих очков за текущее действие
@@ -182,18 +182,19 @@ class Game:
             # Выводится сообщение, если в руке остались кости, которые не при-
             # несли очки. Они не удаляются и используются далее в игре.
             if len(hand) > 0:
-                printer.print_nopoints(hand)
+                screen.display_msg('11_baddice', 3, hand)
 
         # В конце цикла набранные очки за действие добавляются к очкам за ход.
         # На экран выводится информация о набранных очках.
         player.add_scoreturn(action_score)
-        printer.print_scoreearned(action_score)
-        printer.print_scoreturn()
+        screen.display_msg('09_scoreearn', 2, player.name, action_score)
+        screen.display_msg('07_scoreturn', 2, player.name, player.score_turn)
 
         # Проверка, хочет ли игрок закончить ход и сохранить набранные очки
         if player.get_nextaction() is False:
-            self.player.add_scoretotal()
-            printer.print_scoretotal()
+            player.add_scoretotal()
+            screen.display_msg('08_scoretot', 2, player.name,
+                               player.score_total)
             self.check_win()
             return -2
         # Если ход продолжается, происходи проверка, остались ли еще кости
@@ -207,8 +208,8 @@ class Player:
     ''' Представляет родительский класс игрока.
 
         Поля класса:
-        game_mode -- основной функционал игры
-        printer -- инструмент для ввода/вывода данных
+        gm -- основной функционал игры
+        screen -- экран с полем для ввода данных
 
         Поля экземпляра:
         name -- имя игрока
@@ -217,12 +218,12 @@ class Player:
 
     '''
 
-    game_mode = None
-    printer = None
+    gm = None
+    screen = None
 
-    def __init__(self, game_mode, printer, name):
-        Player.game_mode = game_mode
-        Player.printer = printer
+    def __init__(self, game_mode, screen, name):
+        Player.gm = game_mode
+        Player.screen = screen
         self.name = name
         self.score_total = 0
         self.score_turn = 0
@@ -252,28 +253,28 @@ class Human(Player):
 
     def get_dicechoose(self):
         '''Возвращает выбранные игроком кости, если те существуют'''
-        dices = Player.game_mode.dices
+        dices = Player.gm.dices
         while True:
-            inp = input('> ')
+            inp = Player.screen.input_str()
             # Проверка, есть ли все выбранные кости среди выпавших костей
             if (inp.isdigit() and
                all(inp.count(d) <= dices.count(int(d)) for d in inp)):
                 return [int(d) for d in inp]
             else:
-                Player.printer.print_cannotpick()
+                Player.screen.display_msg('12_badpick', 0.5)
 
     def get_nextaction(self):
         '''Узнает, готов ли игрок рискнуть продолжить ход (y/n)'''
-        print('\nContunue?')
+        Player.screen.display_msg('18_continue', 0.5)
         while True:
-            inp = input('> ')
+            inp = Player.screen.input_str()
 
             if inp == 'y':
                 return True
             elif inp == 'n':
                 return False
             else:
-                print('Wrong answer')
+                Player.screen.display_msg('19_badans', 0.5)
 
 
 class Robot(Player):
@@ -298,7 +299,7 @@ class Robot(Player):
 
     def take_row(self, dices, claw):
         '''Забирает в claw ряд(ы) костей'''
-        gm = Player.game_mode
+        gm = Player.gm
         for d in gm.dices:
             if gm.dices.count(d) >= 3:
                 claw.append(d)
@@ -318,7 +319,7 @@ class Robot(Player):
 
     def get_dicechoose(self):
         '''Возвращает выбранные ИИ кости'''
-        gm = Player.game_mode
+        gm = Player.gm
         dices = gm.dices[:]
         claw = []
         singles = dices.count(1) + dices.count(5)  # кол-во единичных костей
@@ -364,7 +365,7 @@ class Robot(Player):
             print('!НЕПРЕДВИДЕННЫЙ СЛУЧАЙ СБОРА КОСТЕЙ!')
             self.take_single(dices, claw)
 
-        Player.printer.print_robotpick(claw)
+        Player.screen.display_msg('14_robpick', 2, claw)
         return claw
 
     def get_nextaction(self):
@@ -379,7 +380,7 @@ class Robot(Player):
                 y = round(-2.5*(x-200)**(1/2)+100)
             return y
 
-        dices = Player.game_mode.dices
+        dices = Player.gm.dices
         chance_to_continue = chance_curve(self.score_turn)
         # После вычисления шанса по формуле, рассматриваются нюансы, увеличива-
         # ющие или уменьшающие риск потерять накопленные очки. Они увеличивают,
@@ -387,7 +388,7 @@ class Robot(Player):
 
         # Если текущее кол-во очнов больше кол-ва очков для победы, то
         # продолжать ход и рисковать не имеет смысла.
-        if self.score_total + self.score_turn >= Player.game_mode.high_bar:
+        if self.score_total + self.score_turn >= Player.gm.high_bar:
             chance_to_continue = 0
         elif len(dices) == 0:
             chance_to_continue += 90
@@ -397,110 +398,10 @@ class Robot(Player):
             chance_to_continue -= 30
 
         choice = tools.randchance(chance_to_continue)
-        Player.printer.print_robotactionchoice(choice)
-        print('ШАНС:', chance_to_continue)  # ОТЛАДКА
-        return choice
-
-
-class Printer:
-    '''Представляет инструмент для вывода сообщений и получения
-        пользовательского ввода.
-
-    Поля экземпляра:
-    game_mode -- экземпляр класса Game с основным функционалам игры
-
-    Методы класса:
-    input_*something* -- возвращает пользовательский ввод в объекте *something*
-    print_*something* -- выводит на экран различные сообщения
-
-    '''
-
-    def __init__(self, game_mode):
-        self.game_mode = game_mode
-
-    def input_player(self):
-        '''Создает и возвращает игрока'''
-        print('Welcome to the game! What is your name?')
-        player = Human(self.game_mode, self, name=input('> '))
-        print('Ok... let me write it down... yep.')
-        return player
-
-    def input_highbar(self):
-        '''Получет и выводит число очков для победы'''
-        high_bar = 0
-        print('Now, choose a maximum fo points.')
-        # Проверка на целч. ввод данных
-        while True:
-            try:
-                high_bar = int(input('> '))
-            except ValueError:
-                print('We need a int')
-            else:
-                # Проверка, в нужном ли диапазоне очки для победы
-                if high_bar < 0 or high_bar > 39999:
-                    print('Bad idea, do it again')
-                    continue
-                else:
-                    break
-        return high_bar
-
-    def print_gamestart(self):
-        print('Great! We can start')
-
-    def print_turnstart(self):
-        gm = self.game_mode
-        print('------------------------------')
-        print('%s\'s turn!' % gm.player.name)
-
-    def print_dices(self, dices):
-        for i in range(len(dices)):
-            print('[%d] ' % dices[i], end=' ')
-        print('\n')
-
-    def print_scoreturn(self):
-        player = self.game_mode.player
-        print('%s\'s score: %d' % (player.name, player.score_turn))
-
-    def print_scoretotal(self):
-        player = self.game_mode.player
-        print('%s\'s total score: %d' % (player.name, player.score_total))
-
-    def print_scoreearned(self, score):
-        player_name = self.game_mode.player.name
-        print('%s was earned %d points!' % (player_name, score))
-
-    def print_nodices(self):
-        print('No dices to pick!')
-
-    def print_nopoints(self, dices):
-        print('These dices do not give you points:', end=' ')
-        for d in dices:
-            print('[%s]' % d, end=' ')
-        print('\n')
-
-    def print_cannotpick(self):
-        print('You cannot pick these dices!')
-
-    def print_robothello(self):
-        robot_name = self.game_mode.second_player.name
-        print('Your enemy is %s' % robot_name)
-
-    def print_robotpick(self, pick):
-        print('Robot was picked: ', end='')
-        for d in pick:
-            print('[%s]' % d, end=' ')
-        print('\n')
-
-    def print_robotactionchoice(self, choice):
-        print('Robot choosed to ', end='')
         if choice is True:
-            print('continue his turn')
+            Player.screen.display_msg('15_00_robturnT', 1)
         else:
-            print('end his turn')
-
-    def print_won(self):
-        player_name = self.game_mode.player.name
-        print('CONGRATS, %s!. YOU WON!' % player_name)
-
-    def print_gameend(self):
-        print('Game was alrady end')
+            Player.screen.display_msg('15_01_robturnF', 1)
+        # ОТЛАДКА
+        Player.screen.display_debug(0.5, 'Шанс: %d' % chance_to_continue)
+        return choice

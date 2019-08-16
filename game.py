@@ -1,17 +1,17 @@
-from classes import Game, Printer, Robot
+import classes as cls
+import graphics
 
-game_mode = Game()
-printer = Printer(game_mode)
-player_human = printer.input_player()
-player_ai = Robot(game_mode, printer, 'zX01')
-game_mode.set_settings(player_human, player_ai,
-                       printer.input_highbar(), printer)
+gm = cls.Game()  # game_mode
+screen = graphics.Screen()
+p_human = cls.Human(gm, screen, 'Human')
+p_robot = cls.Robot(gm, screen, 'zX01')
+gm.set_settings(p_human, p_robot, 1000, screen)
 
 # Основной цикл игры
-while game_mode.game_flag:
+while gm.game_flag:
     # Совершение дейстие в ход. Выясняется, нужно ли добавить кости
-    action_result = game_mode.action()
+    action_result = gm.action()
     if action_result in (-2, -1, 2):
-        game_mode.add_dices()
-    if action_result < 0 and game_mode.game_flag is True:
-        game_mode.switch_player()
+        gm.add_dices()
+    if action_result < 0 and gm.game_flag is True:
+        gm.switch_player()
