@@ -15,3 +15,6 @@ while gm.game_flag:
         gm.add_dices()
     if action_result < 0 and gm.game_flag is True:
         gm.switch_player()
+
+screen.ending()
+del screen

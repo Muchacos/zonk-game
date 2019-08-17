@@ -25,7 +25,7 @@ class Game:
     Методы:
     set_settings -- делает то, что указано в названии
     check_win -- проверяет, выйграл ли игрок
-    check_action -- проверяет, может ли игрок совершить действие в свой ход
+    check_combos -- проверяет, есть ли хоть одно комбо среди костей
     (check_combosrow,
     check_combosrange,
     check_combossingle) -- проверка разных комбинаций
@@ -47,18 +47,19 @@ class Game:
         self.second_player = second_player
         self.high_bar = high_bar
         Game.screen = screen
-        screen.display_msg('13_enemy', 1, second_player.name)
-        screen.display_msg('05_start', 1)
+        screen.display_players(self)
+        screen.display_msg('13_enemy', 2, second_player.name)
+        screen.display_msg('05_start', 2)
 
     def switch_player(self):
         self.player, self.second_player = self.second_player, self.player
-        Game.screen.display_msg('06_whoturn', 1, self.player.name)
+        Game.screen.display_msg('06_whoturn', 1.5, self.player.name)
 
     def check_win(self):
         '''Опускает game_flag в случае выйгрыша текущего игрока'''
         if self.player.score_total >= self.high_bar:
             Game.game_flag = False
-            Game.screen.display_msg('16_won', 5, self.player.name)
+            Game.screen.display_msg('16_won', 10, self.player.name)
 
     def check_combosrow(self, dices):
         '''Возвращает True, если среди костей есть >= 3 кости с одинаковыми
@@ -74,7 +75,7 @@ class Game:
         со значением 1 или 5'''
         return any(d in dices for d in (1, 5))
 
-    def check_action(self):
+    def check_combos(self):
         '''Возвращает True, если среди костей есть хотя бы одна комбинация,
         приносящая очки'''
         d = Game.dices
@@ -108,23 +109,25 @@ class Game:
 
         # Проверка не закончена ли игра
         if Game.game_flag is False:
-            screen.display_msg('17_gmend', 3)
+            screen.display_msg('17_gmend', 0)
             return 0
 
         # Установка рандомных значений для имеющихся костей
         for i in range(len(Game.dices)):
             Game.dices[i] = random.randint(1, 6)
 
-        # Выводим на экран выпавшие кости и предлагает выбрать какие-то из них
+        # Выводим на экран выпавшие кости
         screen.display_dices(Game.dices)
-        screen.display_msg('20_dicechoose', 0.1)
 
         # Проверк может ли игрок совершить действие. Если нет, ход заканчива-
         # ется автоматически, и игрок теряет очки.
-        if self.check_action() is False:
-            screen.display_msg('10_nodice', 3)
+        if self.check_combos() is False:
+            screen.display_msg('10_nodice', 4)
             player.clear_scoreturn()
+            screen.display_score(player, 'turn')
             return -1
+        else:
+            screen.display_msg('20_dicechoose', 0)
 
         # Инициализация текущих очков за текущее действие
         action_score = 0
@@ -187,13 +190,15 @@ class Game:
         # В конце цикла набранные очки за действие добавляются к очкам за ход.
         # На экран выводится информация о набранных очках.
         player.add_scoreturn(action_score)
-        screen.display_msg('09_scoreearn', 2, player.name, action_score)
-        screen.display_msg('07_scoreturn', 2, player.name, player.score_turn)
+        screen.display_score(player, 'turn')
+        screen.display_msg('09_scoreearn', 1.2, player.name, action_score)
 
         # Проверка, хочет ли игрок закончить ход и сохранить набранные очки
         if player.get_nextaction() is False:
             player.add_scoretotal()
-            screen.display_msg('08_scoretot', 2, player.name,
+            screen.display_score(player, 'total')
+            screen.display_score(player, 'turn')
+            screen.display_msg('08_scoretot', 1.2, player.name,
                                player.score_total)
             self.check_win()
             return -2
@@ -251,30 +256,36 @@ class Human(Player):
 
     """
 
+    __type__ = 'Human'
+
     def get_dicechoose(self):
         '''Возвращает выбранные игроком кости, если те существуют'''
         dices = Player.gm.dices
+        screen = Player.screen
         while True:
-            inp = Player.screen.input_str()
+            inp = screen.input_str()
             # Проверка, есть ли все выбранные кости среди выпавших костей
             if (inp.isdigit() and
                all(inp.count(d) <= dices.count(int(d)) for d in inp)):
                 return [int(d) for d in inp]
             else:
-                Player.screen.display_msg('12_badpick', 0.5)
+                screen.display_msg('12_badpick', 1.5)
+                screen.display_msg('20_dicechoose')
 
     def get_nextaction(self):
-        '''Узнает, готов ли игрок рискнуть продолжить ход (y/n)'''
-        Player.screen.display_msg('18_continue', 0.5)
+        '''Узнает, готов ли игрок рискнуть продолжить ход (1/0)'''
+        screen = Player.screen
+        screen.display_msg('18_continue')
         while True:
-            inp = Player.screen.input_str()
+            inp = screen.input_str()
 
-            if inp == 'y':
+            if inp == '1':  # ДОПИЛИТЬ
                 return True
-            elif inp == 'n':
+            elif inp == '0':
                 return False
             else:
-                Player.screen.display_msg('19_badans', 0.5)
+                screen.display_msg('19_badans', 1.5)
+                screen.display_msg('18_continue')
 
 
 class Robot(Player):
@@ -286,6 +297,7 @@ class Robot(Player):
     get_nextaction -- интеллектуальный выбор роботом прололжать ход или нет
 
     """
+    __type__ = 'Robot'
 
     def take_range(self, dices, claw):
         '''Забирает в claw наибольший диапазон костей'''
@@ -364,8 +376,9 @@ class Robot(Player):
         else:
             print('!НЕПРЕДВИДЕННЫЙ СЛУЧАЙ СБОРА КОСТЕЙ!')
             self.take_single(dices, claw)
-
-        Player.screen.display_msg('14_robpick', 2, claw)
+        delay = random.randint(1, 3)
+        Player.screen.display_msg('21_robthink', delay)
+        Player.screen.display_msg('14_robpick', 2.5, claw)
         return claw
 
     def get_nextaction(self):
@@ -399,9 +412,7 @@ class Robot(Player):
 
         choice = tools.randchance(chance_to_continue)
         if choice is True:
-            Player.screen.display_msg('15_00_robturnT', 1)
+            Player.screen.display_msg('15_00_robturnT', 1.3)
         else:
-            Player.screen.display_msg('15_01_robturnF', 1)
-        # ОТЛАДКА
-        Player.screen.display_debug(0.5, 'Шанс: %d' % chance_to_continue)
+            Player.screen.display_msg('15_01_robrurnF', 1.3)
         return choice
