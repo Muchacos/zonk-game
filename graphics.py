@@ -1,32 +1,39 @@
+"""Этот модуль отвечает за графику игры."""
 import curses
 from curses import textpad
 import time
 import os
 
-MSG_REGISTRY = {'01_hello': 'Welcome to the game!',
-                '02_name':  'What is your name?',
+MSG_REGISTRY = {'01_hello': 'Добро пожаловать в игру! %p Я буду вашим ведущим',
+                '02_name':  'Как вас зовут?',
                 '03_writing': 'Ok... let me write it down... yep.',
-                '04_00_maxp': 'Now, choose a maximum fo points.',
+                '04_00_maxp': '''Человек, введите максимальное число очков.
+                                 %p Победит тот, кто наберет столько же или
+                                 больше''',
                 '04_01_errint': 'We need a int',
                 '04_02_errval': 'Bad idea, do it again',
-                '05_start': 'Great! We can start',
-                '06_whoturn': '%s\'s turn',
-                '07_scoreturn': '%s\'s score: %s',
-                '08_scoretot': '%s\'s total score: %s',
-                '09_scoreearn': '%s was earned %s points',
-                '10_nodice': 'No dices to pick!',
-                '11_baddice': 'Some dices do not give you points: %s',
-                '12_badpick': 'You cannot pick these dices!',
-                '13_enemy': 'Your enemy is %s',
-                '14_robpick': 'Robot was picked: %s',
-                '15_00_robturnT': 'Robot choosed to continue his turn',
-                '15_01_robrurnF': 'Robot choosed to end his turn',
-                '16_won': 'CONGRATS, %s!. YOU WON!',
-                '17_gmend': 'Game was alrady end',
-                '18_continue': 'Continue turn? (1/0)',  # ДОПИЛИТЬ
-                '19_badans': 'Wrong answer',
-                '20_dicechoose': 'Choose the dices',
-                '21_robthink': 'Robot is thinking'
+                '05_start': 'Великолепно! Начинаем игру!',
+                '06_whoturn': '%s, твой ход',
+                '07_scoreturn': '%s, твои очки за ход: %s',
+                '08_scoretot': '%s, всего ты заработал: %s',
+                '09_scoreearn': '%s, ты заработал %s очков',
+                '10_nodice': 'Нет ни одной комбинации!',
+                '11_baddice': 'Некоторые кости не принесли вам очки: %s',
+                '12_badpick': 'Вы не можете выбрать эти кости!',
+                '13_enemy': """Вас я буду называть Человек. %p А ваш противник -
+                               робот по имени %s""",
+                '14_robpick': 'Робот взял эти кости: %s',
+                '15_00_robturnT': 'Робот решил продолжить ход',
+                '15_01_robrurnF': 'Робот решил закончить ход',
+                '16_won': 'ПОЗДРАВЛЯЮ, %s!. ТЫ ПОБЕДИЛ!',
+                '17_gmend': 'Game was alrady en',
+                '18_continue': 'Продолжить ход? (1/0)',  # ДОПИЛИТЬ
+                '19_badans': 'Неправильный ответ',
+                '20_dicechoose': 'Выберите кости',
+                '21_robthink': 'Робот думает',
+                '22_dontans': 'Можете не отвечать, если не хотите',
+                '23_givname': 'Я буду называть вас \'Человек\'',
+                '24_hbar': 'Выберите максимальное число очков'
                 }
 
 
@@ -35,7 +42,7 @@ class Screen:
     SH, SW = 30, 65
     ZONE_DICES = (3, 5, 9, 37, 7, 33)
     ZONE_SCORE = (3, 43, 9, 59, 7, 17)
-    ZONE_INPUT = (20, 5, 20, 19, 1, 15)
+    ZONE_INPUT = (20, 5, 23, 40, 4, 36)
     ZONE_MSG = (14, 5, 16, 59, 3, 55)
 
     def __init__(self):
@@ -79,19 +86,19 @@ class Screen:
         self.clear_zone(ZONE_SCORE)
         self.clear_zone(ZONE_MSG)
 
-        txt = '/dices/'
+        txt = '/кости/'
         stdscr.addstr(ZONE_DICES[0] - 1, ZONE_DICES[3] - len(txt), txt)
-        txt = '/score/'
+        txt = '/очки/'
         stdscr.addstr(ZONE_SCORE[0] - 1, ZONE_SCORE[3] - len(txt), txt)
-        txt = '/input/'
+        txt = '/ввод/'
         stdscr.addstr(ZONE_INPUT[0] - 1, ZONE_INPUT[3] - len(txt), txt)
-        txt = '/messages/'
+        txt = '/сообщения/'
         stdscr.addstr(ZONE_MSG[0] - 1, ZONE_MSG[3] - len(txt), txt)
 
         stdscr.addstr(ZONE_INPUT[0], ZONE_INPUT[1] - 1, '>')
 
         for y in range(ZONE_SCORE[0], ZONE_SCORE[2] + 1):
-            stdscr.addstr(y, ZONE_SCORE[1] + ZONE_SCORE[5] // 2, '|')
+            stdscr.addstr(y, ZONE_SCORE[1] + ZONE_SCORE[5] // 2, '│')
         txt = 'В'
         stdscr.addstr(ZONE_SCORE[0] + 2, ZONE_SCORE[1], ' ' * ZONE_SCORE[5])
         stdscr.addstr(ZONE_SCORE[0] + 2, ZONE_SCORE[1] + ZONE_SCORE[5] // 2 -
@@ -100,6 +107,9 @@ class Screen:
         stdscr.addstr(ZONE_SCORE[0] + 4, ZONE_SCORE[1], ' ' * ZONE_SCORE[5])
         stdscr.addstr(ZONE_SCORE[0] + 4, ZONE_SCORE[1] + ZONE_SCORE[5] // 2 -
                       len(txt) // 2, txt, curses.A_UNDERLINE)
+        txt = 'победа ='
+        stdscr.addstr(ZONE_SCORE[0] + ZONE_SCORE[4] - 1, ZONE_SCORE[1] +
+                      ZONE_SCORE[5] // 2 - len(txt) + 1, txt)
 
         stdscr.refresh()
 
@@ -113,11 +123,10 @@ class Screen:
         curses.init_pair(1, 15, 0)
         curses.init_pair(2, 25, 0)
 
-    def clear_zone(self, coord, back=' ', cp_id=0):
+    def clear_zone(self, zone, back=' ', cp_id=0):
         stdscr = self.stdscr
-        for y in range(coord[0], coord[2] + 1):
-            stdscr.addstr(y, coord[1], back * coord[5],
-                          curses.color_pair(cp_id))
+        for y in range(zone[0], zone[2] + 1):
+            stdscr.addstr(y, zone[1], back * zone[5], curses.color_pair(cp_id))
         stdscr.refresh()
 
     def input_str(self):
@@ -128,17 +137,44 @@ class Screen:
         stdscr.move(ZONE_INPUT[0], ZONE_INPUT[1])
         curses.curs_set(1)
 
-        while len(inp) < ZONE_INPUT[5]:
-            key = stdscr.getch()  # BUG: Нажатия работают постоянно
-            if key in range(48, 58):
-                stdscr.addstr(chr(key))
-                inp += chr(key)
-            elif key == 8 and inp != '':
+        # Пока не запонится поле для ввода
+        while len(inp) < ZONE_INPUT[4] * ZONE_INPUT[5] - 1:
+            key_id = stdscr.getch()  # BUG: Нажатия работают постоянно
+            key = chr(key_id)
+
+            # Вывод клавиши на экран, если это цифра или буква
+            if key.isalpha() or key_id in range(32, 65):
+                stdscr.addstr(key)
+                inp += key
+
+                cy, cx = stdscr.getyx()  # положение курсора
+                # Если курсор достиг края, он перемещается на след. строку
+                if cx == ZONE_INPUT[1] + ZONE_INPUT[5]:
+                    stdscr.move(cy + 1, ZONE_INPUT[1])
+
+            # Нажат ли Backspase и есть ли возможность что-то стереть
+            elif key_id == 8 and inp != '':
                 cy, cx = stdscr.getyx()
-                stdscr.addch(cy, cx - 1, ' ')
-                stdscr.move(cy, cx - 1)
-                inp = inp[:-1]
-            elif key == 10 and inp != '':
+                # Если курсор находится в начале новой строки, то сотрется
+                # символ, находящийся в конце предыдущей
+                if cx == ZONE_INPUT[1]:
+                    dely = cy - 1
+                    delx = ZONE_INPUT[1] + ZONE_INPUT[5] - 1
+                # Иначе сотрется символ, находящийся за курсором
+                else:
+                    dely = cy
+                    delx = cx - 1
+                stdscr.addch(dely, delx, ' ')  # удаление = замена на пробел
+                stdscr.move(dely, delx)  # курсор перемещается назад
+                inp = inp[:-1]  # уменьшение ввода на удаленный символ
+
+            # Если нажат Esc, то удаляется ввод и курсор перемещается в начало
+            elif key_id == 27:
+                self.clear_zone(ZONE_INPUT)
+                inp = ''
+
+            # Если нажат Enter то ввод заканчивается
+            elif key_id in (10, 13):
                 break
 
         curses.curs_set(0)
@@ -190,17 +226,46 @@ class Screen:
 
     def display_msg(self, id, display_time=0, *data):
         stdscr = self.stdscr
-        y, x = Screen.ZONE_MSG[0], Screen.ZONE_MSG[1]
+        ZONE_MSG = Screen.ZONE_MSG
+        y, x = ZONE_MSG[0], ZONE_MSG[1]
+        msg = MSG_REGISTRY[id]
+        fill = 0  # заполненность строк по x
+        data_idx = 0
+
+        # Отчищение зоны сообщений и перемещение курсора в ее начало
         self.clear_zone(Screen.ZONE_MSG)
-        stdscr.addstr(y, x, MSG_REGISTRY[id] % data)
-        stdscr.refresh()
+        stdscr.move(y, x)
+
+        for word in msg.split():
+            # Проверка, не нужно ли вставить данные
+            if word.startswith('%s'):                   # Учитываем возможные
+                word = str(data[data_idx]) + word[2:]  # знаки препинания.
+                data_idx += 1
+            elif word == '%p':  # Необходимо ли сделать паузу
+                time.sleep(0.3)
+                continue
+
+            if fill + len(word) + 1 > ZONE_MSG[5]:  # Переход на новую строку
+                stdscr.move(y + 1, x)               # при переполнении преды-
+                fill = 0                            # дущей.
+            for liter in word + ' ':
+                stdscr.addch(liter)  # Ввод слова посимвольно,
+                stdscr.refresh()     # со вставкой пробела.
+                time.sleep(0.02)
+            fill += len(word) + 1
+
         if display_time != 0:
             time.sleep(display_time)
             self.clear_zone(Screen.ZONE_MSG)
-            return 0
-        return 0
+
+    def add_high_bar(self, hbar):
+        """Печатает число очков для победы в зоне для очков."""
+        ZONE_SCORE = Screen.ZONE_SCORE
+        self.stdscr.addstr(ZONE_SCORE[0] + ZONE_SCORE[4] - 1,
+                           ZONE_SCORE[1] + ZONE_SCORE[5] // 2 + 2, str(hbar))
 
     def ending(self):
+        """Проигрывает анимацию сдвига экрана вверх."""
         stdscr = self.stdscr
         stdscr.move(0, 0)
         for i in range(Screen.SH-1):

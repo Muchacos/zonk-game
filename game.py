@@ -1,11 +1,7 @@
-import classes as cls
 import graphics
 
-gm = cls.Game()  # game_mode
 screen = graphics.Screen()
-p_human = cls.Human(gm, screen, 'Human')
-p_robot = cls.Robot(gm, screen, 'zX01')
-gm.set_settings(p_human, p_robot, 1000, screen)
+gm = classes.Game(screen)  # game_mode
 
 # Основной цикл игры
 while gm.game_flag:

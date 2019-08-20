@@ -38,17 +38,35 @@ class Game:
     screen = None
     dices = [1]*6
 
-    def __init__(self):
-        pass
-
-    def set_settings(self, player, second_player, high_bar, screen):
-        '''Принимает настройки и Screen игры, записывая их в поля'''
-        self.player = player
-        self.second_player = second_player
-        self.high_bar = high_bar
+    def __init__(self, screen):
         Game.screen = screen
+        screen.display_msg('01_hello', 2)
+        screen.display_msg('02_name')
+        while True:
+            name = screen.input_str()
+            if len(name) == 0:
+                screen.display_msg('22_dontans', 2)
+                name = 'Человек'
+                break
+            elif len(name) <= screen.ZONE_SCORE[5] // 2 - 1:
+                screen.display_msg('03_writing', 1)
+                break
+            else:
+                screen.display_msg('25_badname')
+        self.player = Human(self, screen, name)
+        self.second_player = Robot(self, screen, 'zX01')
+        screen.display_msg('13_enemy', 2, self.second_player.name)
         screen.display_players(self)
-        screen.display_msg('13_enemy', 2, second_player.name)
+        screen.display_msg('04_00_maxp', 0, self.player.name)
+        while True:
+            hbar = screen.input_str()
+            if hbar.isdigit() and int(hbar) > 100 and int(hbar) < 30000:
+                self.high_bar = int(hbar)
+                break
+            else:
+                screen.display_msg('19_badans', 1)
+                screen.display_msg('04_00_maxp', 0, self.player.name)
+        screen.add_high_bar(hbar)
         screen.display_msg('05_start', 2)
 
     def switch_player(self):
@@ -59,7 +77,7 @@ class Game:
         '''Опускает game_flag в случае выйгрыша текущего игрока'''
         if self.player.score_total >= self.high_bar:
             Game.game_flag = False
-            Game.screen.display_msg('16_won', 10, self.player.name)
+            Game.screen.display_msg('16_won', 3, self.player.name)
 
     def check_combosrow(self, dices):
         '''Возвращает True, если среди костей есть >= 3 кости с одинаковыми
@@ -107,11 +125,6 @@ class Game:
         screen = Game.screen
         player = self.player
 
-        # Проверка не закончена ли игра
-        if Game.game_flag is False:
-            screen.display_msg('17_gmend', 0)
-            return 0
-
         # Установка рандомных значений для имеющихся костей
         for i in range(len(Game.dices)):
             Game.dices[i] = random.randint(1, 6)
@@ -122,11 +135,11 @@ class Game:
         # Проверк может ли игрок совершить действие. Если нет, ход заканчива-
         # ется автоматически, и игрок теряет очки.
         if self.check_combos() is False:
-            screen.display_msg('10_nodice', 4)
+            screen.display_msg('10_nodice', 3.5)
             player.clear_scoreturn()
             screen.display_score(player, 'turn')
             return -1
-        else:
+        elif player.__type__ == 'Human':
             screen.display_msg('20_dicechoose', 0)
 
         # Инициализация текущих очков за текущее действие
@@ -185,20 +198,20 @@ class Game:
             # Выводится сообщение, если в руке остались кости, которые не при-
             # несли очки. Они не удаляются и используются далее в игре.
             if len(hand) > 0:
-                screen.display_msg('11_baddice', 3, hand)
+                screen.display_msg('11_baddice', 2, hand)
 
         # В конце цикла набранные очки за действие добавляются к очкам за ход.
         # На экран выводится информация о набранных очках.
         player.add_scoreturn(action_score)
         screen.display_score(player, 'turn')
-        screen.display_msg('09_scoreearn', 1.2, player.name, action_score)
+        screen.display_msg('09_scoreearn', 1.7, player.name, action_score)
 
         # Проверка, хочет ли игрок закончить ход и сохранить набранные очки
         if player.get_nextaction() is False:
             player.add_scoretotal()
             screen.display_score(player, 'total')
             screen.display_score(player, 'turn')
-            screen.display_msg('08_scoretot', 1.2, player.name,
+            screen.display_msg('08_scoretot', 2, player.name,
                                player.score_total)
             self.check_win()
             return -2
@@ -269,7 +282,7 @@ class Human(Player):
                all(inp.count(d) <= dices.count(int(d)) for d in inp)):
                 return [int(d) for d in inp]
             else:
-                screen.display_msg('12_badpick', 1.5)
+                screen.display_msg('12_badpick', 1)
                 screen.display_msg('20_dicechoose')
 
     def get_nextaction(self):
@@ -284,7 +297,7 @@ class Human(Player):
             elif inp == '0':
                 return False
             else:
-                screen.display_msg('19_badans', 1.5)
+                screen.display_msg('19_badans', 1)
                 screen.display_msg('18_continue')
 
 
@@ -378,7 +391,7 @@ class Robot(Player):
             self.take_single(dices, claw)
         delay = random.randint(1, 3)
         Player.screen.display_msg('21_robthink', delay)
-        Player.screen.display_msg('14_robpick', 2.5, claw)
+        Player.screen.display_msg('14_robpick', 2, claw)
         return claw
 
     def get_nextaction(self):
@@ -412,7 +425,7 @@ class Robot(Player):
 
         choice = tools.randchance(chance_to_continue)
         if choice is True:
-            Player.screen.display_msg('15_00_robturnT', 1.3)
+            Player.screen.display_msg('15_00_robturnT', 2)
         else:
-            Player.screen.display_msg('15_01_robrurnF', 1.3)
+            Player.screen.display_msg('15_01_robrurnF', 2)
         return choice
