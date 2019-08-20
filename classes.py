@@ -137,7 +137,7 @@ class Game:
             screen.display_score(player, "turn")
             return -1
         elif player.__type__ == "Human":
-            screen.display_msg("20_dicechoose", 0)
+            screen.display_msg("20_dicechoose")
 
         # Инициализация текущих очков за текущее действие
         action_score = 0
@@ -195,7 +195,7 @@ class Game:
             # Выводится сообщение, если в руке остались кости, которые не при-
             # несли очки. Они не удаляются и используются далее в игре.
             if len(hand) > 0:
-                screen.display_msg("11_baddice", 2, hand)
+                screen.display_msg("11_baddice", 3, hand)
 
         # В конце цикла набранные очки за действие добавляются к очкам за ход.
         # На экран выводится информация о набранных очках.
@@ -384,11 +384,7 @@ class Robot(Player):
             else:
                 self.take_single(dices, claw, 1)
 
-        # ОТЛАДКА непредвиденного случая
-        else:
-            print("!НЕПРЕДВИДЕННЫЙ СЛУЧАЙ СБОРА КОСТЕЙ!")
-            self.take_single(dices, claw)
-        delay = random.randint(1, 3)
+        delay = random.randint(1, 3) * -1
         Player.screen.display_msg("21_robthink", delay)
         Player.screen.display_msg("14_robpick", 2, claw)
         return claw

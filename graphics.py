@@ -6,7 +6,7 @@ import os
 
 MSG_REGISTRY = {"01_hello": "Добро пожаловать в игру! %p Я буду вашим ведущим",
                 "02_name":  "Как вас зовут?",
-                "03_writing": "Ок, позвольте мне записать... %p %p всё",
+                "03_writing": "Ок, позвольте мне записать %p . %p . %p .",
                 "04_00_maxp": """%s, теперь введите максимальное число очков.
                                  %p Победит тот, кто наберет столько же или
                                  больше""",
@@ -26,7 +26,7 @@ MSG_REGISTRY = {"01_hello": "Добро пожаловать в игру! %p Я 
                 "15_01_robrurnF": "Робот решил закончить ход",
                 "16_won": "ПОЗДРАВЛЯЮ, %s!. ТЫ ПОБЕДИЛ!",
                 "17_gmend": "Game was alrady en",
-                "18_continue": "Продолжить ход? (1/0)",  # ДОПИЛИТЬ
+                "18_continue": "Продолжить ход? (1/0)",
                 "19_badans": "Неправильный ответ",
                 "20_dicechoose": "Выберите кости",
                 "21_robthink": "Робот думает",
@@ -84,7 +84,7 @@ class Screen:
         curses.use_default_colors()
         self.init_pairs()
         curses.noecho()
-        # stdscr.keypad(True)   BUG: Нажатие конопи 546
+        stdscr.keypad(True)
         curses.curs_set(0)
 
         self.clear_zone((0, 0, SH-2, SW-2, SH, SW), ".", 2)
@@ -164,10 +164,11 @@ class Screen:
 
         stdscr.move(ZONE_INPUT[0], ZONE_INPUT[1])
         curses.curs_set(1)
+        curses.flushinp()
 
         # Пока не запонится поле для ввода
         while len(inp) < ZONE_INPUT[4] * ZONE_INPUT[5] - 1:
-            key_id = stdscr.getch()  # BUG: Нажатия работают постоянно
+            key_id = stdscr.getch()
             key = chr(key_id)
 
             # Вывод клавиши на экран, если это цифра или буква
@@ -193,8 +194,8 @@ class Screen:
                     dely = cy
                     delx = cx - 1
                 stdscr.addch(dely, delx, " ")  # удаление = замена на пробел
-                stdscr.move(dely, delx)  # курсор перемещается назад
-                inp = inp[:-1]  # уменьшение ввода на удаленный символ
+                stdscr.move(dely, delx)
+                inp = inp[:-1]
 
             # Если нажат Esc, то удаляется ввод и курсор перемещается в начало
             elif key_id == 27:
@@ -255,40 +256,50 @@ class Screen:
             stdscr.addstr(y, x, "     ")
         stdscr.refresh()
 
-    def display_msg(self, id, display_time=0, *data):
+    def display_msg(self, id, delay=0, *data):
         """Выводит сообщение из реестра на заданное время, вставляя данные."""
         stdscr = self.stdscr
         ZONE_MSG = Screen.ZONE_MSG
         y, x = ZONE_MSG[0], ZONE_MSG[1]
         msg = MSG_REGISTRY[id]
-        fill = 0  # заполненность строк по x
+        fill = 0  # заполненность текущей строки по x
         data_idx = 0
 
         # Отчищение зоны сообщений и перемещение курсора в ее начало
-        self.clear_zone(Screen.ZONE_MSG)
+        self.clear_zone(ZONE_MSG)
         stdscr.move(y, x)
 
         for word in msg.split():
-            # Проверка, не нужно ли вставить данные
-            if word.startswith("%s"):                   # Учитываем возможные
-                word = str(data[data_idx]) + word[2:]  # знаки препинания.
+            # Вставка данных по спец символу
+            if word.startswith("%s"):                  # Учет возможных
+                word = str(data[data_idx]) + word[2:]  # знаков препинания.
                 data_idx += 1
-            elif word == "%p":  # Необходимо ли сделать паузу
+            # Пауза во вводе по спец символу
+            elif word == "%p":
                 time.sleep(0.3)
                 continue
 
-            if fill + len(word) + 1 > ZONE_MSG[5]:  # Переход на новую строку
-                stdscr.move(y + 1, x)               # при переполнении преды-
-                fill = 0                            # дущей.
-            for liter in word + " ":
-                stdscr.addch(liter)  # Ввод слова посимвольно,
-                stdscr.refresh()     # со вставкой пробела.
+            # Переход на новую строку при переполнении предыдущей
+            if fill + len(word) + 1 > ZONE_MSG[5]:
+                stdscr.move(y + 1, x)
+                fill = 0
+
+            # Посимвольный ввод слова
+            for alpha in word + " ":
+                stdscr.addch(alpha)
+                stdscr.refresh()
                 time.sleep(0.02)
             fill += len(word) + 1
 
-        if display_time != 0:
-            time.sleep(display_time)
-            self.clear_zone(Screen.ZONE_MSG)
+        # Если задержка - положительное число, то ее можно прервать нажатием
+        # клавиши. Если отрицательное - прервать ее нельзя.
+        if delay > 0:
+            curses.flushinp()
+            stdscr.timeout(round(delay * 1000))
+            stdscr.getch()
+            stdscr.timeout(-1)
+        else:
+            time.sleep(abs(delay))
 
     def add_high_bar(self, hbar):
         """Печатает число очков для победы в зоне для очков."""
