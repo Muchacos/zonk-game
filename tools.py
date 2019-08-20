@@ -1,8 +1,9 @@
+"""Функции этого модуля упрощают работу над игровой механикой."""
 import random as r
 
 
 def randchance(chance):
-    '''Возвращает True с определенным шансом'''
+    """Возвращает True с заданным шансом."""
     if chance >= 100:
         return True
     elif chance <= 0:

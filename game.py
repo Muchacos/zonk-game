@@ -1,3 +1,5 @@
+"""Здесь происходит объединение всех модулей в полноценную игру."""
+import classes
 import graphics
 
 screen = graphics.Screen()
