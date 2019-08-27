@@ -1,6 +1,7 @@
 """Этот модуль отвечает за графику игры."""
 import curses
 from curses import textpad
+import random
 import time
 import os
 
@@ -36,6 +37,13 @@ MSG_REGISTRY = {"01_hello": "Добро пожаловать в игру! %p Я 
                                  выберете что-то покороче"""
                 }
 
+DICES = {1: ["       ", "│     │", "│  ●  │", "│     │"],
+         2: ["       ", "│    ●│", "│     │", "│●    │"],
+         3: ["       ", "│●    │", "│  ●  │", "│    ●│"],
+         4: ["       ", "│●   ●│", "│     │", "│●   ●│"],
+         5: ["       ", "│●   ●│", "│  ●  │", "│●   ●│"],
+         6: ["       ", "│●   ●│", "│●   ●│", "│●   ●│"]}
+
 
 class Screen:
     """Представляет игровой экран, отображающий всю графику.
@@ -62,11 +70,12 @@ class Screen:
 
     """
 
-    SH, SW = 30, 65
-    ZONE_DICES = (3, 5, 9, 37, 7, 33)
-    ZONE_SCORE = (3, 43, 9, 59, 7, 17)
-    ZONE_INPUT = (20, 5, 23, 40, 4, 36)
-    ZONE_MSG = (14, 5, 16, 59, 3, 55)
+    SH, SW = 28, 64
+    ZONE_DICES = (2, 3, 14, 31, 13, 29)
+    ZONE_SCORE = (2, 36, 8, 60, 9, 25)
+    ZONE_PICK = (12, 36, 14, 60, 1, 25)
+    ZONE_MSG = (18, 3, 20, 60, 3, 58)
+    ZONE_INPUT = (24, 3, 24, 31, 1, 29)
 
     def __init__(self):
         """Иниц. stdscr, установка параметров теримнала и прорисовка UI."""
@@ -75,6 +84,7 @@ class Screen:
         ZONE_INPUT = Screen.ZONE_INPUT
         ZONE_MSG = Screen.ZONE_MSG
         ZONE_SCORE = Screen.ZONE_SCORE
+        ZONE_PICK = Screen.ZONE_PICK
         self.stdscr = curses.initscr()
         stdscr = self.stdscr
 
@@ -87,53 +97,33 @@ class Screen:
         stdscr.keypad(True)
         curses.curs_set(0)
 
-        self.clear_zone((0, 0, SH-2, SW-2, SH, SW), ".", 2)
+        self.clear_zone((0, 0, SH-2, SW-2, SH, SW), "∙", 2)
 
-        stdscr.attron(curses.color_pair(1))
-        stdscr.box()
-        textpad.rectangle(stdscr,
-                          ZONE_DICES[0] - 1, ZONE_DICES[1] - 1,
-                          ZONE_DICES[2] + 1, ZONE_DICES[3] + 1)
-        textpad.rectangle(stdscr,
-                          ZONE_SCORE[0] - 1, ZONE_SCORE[1] - 1,
-                          ZONE_SCORE[2] + 1, ZONE_SCORE[3] + 1)
-        textpad.rectangle(stdscr,
-                          ZONE_INPUT[0] - 1, ZONE_INPUT[1] - 1,
-                          ZONE_INPUT[2] + 1, ZONE_INPUT[3] + 1)
-        textpad.rectangle(stdscr,
-                          ZONE_MSG[0] - 1, ZONE_MSG[1] - 1,
-                          ZONE_MSG[2] + 1, ZONE_MSG[3] + 1)
-        stdscr.attroff(curses.color_pair(1))
+        for zone, txt in ([ZONE_DICES, "┤кости├"], [ZONE_SCORE, "┤очки├"],
+                          [ZONE_INPUT, "┤ввод├"],  [ZONE_PICK, "┤выбор├"],
+                          [ZONE_MSG, "┤сообщения├"]):
+            uy, lx = zone[0]-1, zone[1]-1
+            ly, rx = zone[2]+1, zone[3]+1
+            textpad.rectangle(stdscr, uy, lx, ly, rx)
+            stdscr.addstr(uy, lx, "∙")
+            stdscr.addstr(uy, rx, "∙")
+            stdscr.addstr(ly, lx, "∙")
+            stdscr.addstr(ly, rx, "∙")
+            stdscr.addstr(uy, rx-len(txt)-2, txt)
+            self.clear_zone(zone)
 
-        self.clear_zone(ZONE_DICES)
-        self.clear_zone(ZONE_INPUT)
-        self.clear_zone(ZONE_SCORE)
-        self.clear_zone(ZONE_MSG)
+        stdscr.addstr(ZONE_SCORE[0]+2, ZONE_SCORE[1]+1,
+                      "Общ:  _____     _____")
+        stdscr.addstr(ZONE_SCORE[0]+4, ZONE_SCORE[1]+1,
+                      "Ход:  _____     _____")
+        stdscr.addstr(ZONE_SCORE[0]+6, ZONE_SCORE[1]+1,
+                      "Поб:       _____")
+        stdscr.addstr(ZONE_INPUT[0], ZONE_INPUT[1]-1, ">")
 
-        txt = "/кости/"
-        stdscr.addstr(ZONE_DICES[0] - 1, ZONE_DICES[3] - len(txt), txt)
-        txt = "/очки/"
-        stdscr.addstr(ZONE_SCORE[0] - 1, ZONE_SCORE[3] - len(txt), txt)
-        txt = "/ввод/"
-        stdscr.addstr(ZONE_INPUT[0] - 1, ZONE_INPUT[3] - len(txt), txt)
-        txt = "/сообщения/"
-        stdscr.addstr(ZONE_MSG[0] - 1, ZONE_MSG[3] - len(txt), txt)
-
-        stdscr.addstr(ZONE_INPUT[0], ZONE_INPUT[1] - 1, ">")
-
-        for y in range(ZONE_SCORE[0], ZONE_SCORE[2] + 1):
-            stdscr.addstr(y, ZONE_SCORE[1] + ZONE_SCORE[5] // 2, "│")
-        txt = "В"
-        stdscr.addstr(ZONE_SCORE[0] + 2, ZONE_SCORE[1], " " * ZONE_SCORE[5])
-        stdscr.addstr(ZONE_SCORE[0] + 2, ZONE_SCORE[1] + ZONE_SCORE[5] // 2 -
-                      len(txt) // 2, txt, curses.A_UNDERLINE)
-        txt = "Х"
-        stdscr.addstr(ZONE_SCORE[0] + 4, ZONE_SCORE[1], " " * ZONE_SCORE[5])
-        stdscr.addstr(ZONE_SCORE[0] + 4, ZONE_SCORE[1] + ZONE_SCORE[5] // 2 -
-                      len(txt) // 2, txt, curses.A_UNDERLINE)
-        txt = "победа ="
-        stdscr.addstr(ZONE_SCORE[0] + ZONE_SCORE[4] - 1, ZONE_SCORE[1] +
-                      ZONE_SCORE[5] // 2 - len(txt) + 1, txt)
+        self.clear_zone(ZONE_PICK, "/")
+        txt = "UNDER CONSTRUCTION"
+        stdscr.addstr(ZONE_PICK[0]+1, ZONE_PICK[1]+ZONE_PICK[5]//2-len(txt)//2,
+                      txt)
 
         stdscr.refresh()
 
@@ -144,10 +134,23 @@ class Screen:
         curses.curs_set(1)
         curses.endwin()
 
+    def build_dice(self, y, x, value):
+        """Собирает кость со значением value в координатах y и x."""
+        stdscr = self.stdscr
+        for idx, line in enumerate(DICES[value]):
+            if idx == 0:
+                stdscr.addstr(y, x + 1, line[:-2], curses.A_UNDERLINE)
+            elif idx == 3:
+                stdscr.addstr(y + idx, x, line, curses.A_UNDERLINE)
+                stdscr.addch(y + 3, x, "│")
+                stdscr.addch(y + 3, x + 6, "│")
+            else:
+                stdscr.addstr(y + idx, x, line)
+
     def init_pairs(self):
         """Установка цветовых пар (используемых цветов)."""
         curses.init_pair(1, 15, 0)
-        curses.init_pair(2, 25, 0)
+        curses.init_pair(2, 26, 0)
 
     def clear_zone(self, zone, back=" ", cp_id=0):
         """Принимает конст. ZONE_*, задний фон, цвет, и отчищает эту зону."""
@@ -214,24 +217,26 @@ class Screen:
         """Печатает на экране имена игроков в зоне для очков."""
         stdscr = self.stdscr
         ZONE_SCORE = Screen.ZONE_SCORE
-        name1 = game_mode.player.name
-        name2 = game_mode.second_player.name
-        stdscr.addstr(ZONE_SCORE[0], ZONE_SCORE[1] + 1, name1)
-        stdscr.addstr(ZONE_SCORE[0], ZONE_SCORE[1] + ZONE_SCORE[5] // 2 + 2,
-                      name2)
+        n1 = game_mode.player.name
+        n2 = game_mode.second_player.name
+        stdscr.addstr(ZONE_SCORE[0], ZONE_SCORE[1]+7, n1)
+        stdscr.addstr(ZONE_SCORE[0], ZONE_SCORE[1]+17, n2)
         stdscr.refresh()
 
     def display_dices(self, dices):
         """Выводит на экран кости из списка dices."""
-        stdscr = self.stdscr
-        ZONE_DICES = Screen.ZONE_DICES
+        zone_y, zone_x = Screen.ZONE_DICES[0], Screen.ZONE_DICES[1]
+        dices_coord = []
 
-        self.clear_zone(ZONE_DICES)
-        string = ("[%d] " * len(dices) % tuple(dices))[:-1]
-        stdscr.addstr(ZONE_DICES[0] + ZONE_DICES[4] // 2,
-                      ZONE_DICES[1] + ZONE_DICES[5] // 2 - len(string) // 2,
-                      string)
-        stdscr.refresh()
+        self.clear_zone(Screen.ZONE_DICES)
+        for value in dices:
+            while True:
+                y = random.choice([zone_y, zone_y+4, zone_y+8])
+                x = random.choice([zone_x+2, zone_x+11, zone_x+20])
+                if [y, x] not in dices_coord:
+                    dices_coord.append([y, x])
+                    self.build_dice(y, x, value)
+                    break
 
     def display_score(self, player, score_type):
         """Печатает очки игоков (по типу) в зоне для очков."""
@@ -246,23 +251,23 @@ class Screen:
             y = ZONE_SCORE[0] + 4
 
         if player.__type__ == "Robot":
-            x = ZONE_SCORE[1] + ZONE_SCORE[5] // 2 + 2
+            x = ZONE_SCORE[1] + 17
         elif player.__type__ == "Human":
-            x = ZONE_SCORE[1] + 1
+            x = ZONE_SCORE[1] + 7
 
         if score != 0:
-            stdscr.addstr(y, x, str(score))
+            stdscr.addstr(y, x, str(score), curses.A_UNDERLINE)
         else:
-            stdscr.addstr(y, x, "     ")
+            stdscr.addstr(y, x, "_____")
         stdscr.refresh()
 
     def display_msg(self, id, delay=0, *data):
         """Выводит сообщение из реестра на заданное время, вставляя данные."""
         stdscr = self.stdscr
         ZONE_MSG = Screen.ZONE_MSG
-        y, x = ZONE_MSG[0], ZONE_MSG[1]
+        y, x = ZONE_MSG[0], ZONE_MSG[1] + 1
         msg = MSG_REGISTRY[id]
-        fill = 0  # заполненность текущей строки по x
+        fill = 1  # заполненность текущей строки по x
         data_idx = 0
 
         # Отчищение зоны сообщений и перемещение курсора в ее начало
@@ -276,13 +281,13 @@ class Screen:
                 data_idx += 1
             # Пауза во вводе по спец символу
             elif word == "%p":
-                time.sleep(0.3)
+                time.sleep(0.4)
                 continue
 
             # Переход на новую строку при переполнении предыдущей
             if fill + len(word) + 1 > ZONE_MSG[5]:
                 stdscr.move(y + 1, x)
-                fill = 0
+                fill = 1
 
             # Посимвольный ввод слова
             for alpha in word + " ":
@@ -304,8 +309,8 @@ class Screen:
     def add_high_bar(self, hbar):
         """Печатает число очков для победы в зоне для очков."""
         ZONE_SCORE = Screen.ZONE_SCORE
-        self.stdscr.addstr(ZONE_SCORE[0] + ZONE_SCORE[4] - 1,
-                           ZONE_SCORE[1] + ZONE_SCORE[5] // 2 + 2, str(hbar))
+        self.stdscr.addstr(ZONE_SCORE[0]+6, ZONE_SCORE[1]+12,
+                           str(hbar), curses.A_UNDERLINE)
 
     def ending(self):
         """Проигрывает анимацию сдвига экрана вверх."""

@@ -172,7 +172,7 @@ class Game:
                             score += 1000
                         else:
                             score += dice*100
-                        score *= 2**(row_len - 3)
+                        score *= (row_len - 2)
                         action_score += score
 
                         for i in range(row_len):
