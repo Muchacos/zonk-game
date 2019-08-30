@@ -1,6 +1,13 @@
 """Тут содержатся все классы, составляющие игровую логику."""
 import random
+
 import tools
+
+KEYCODES = {
+    "t_continue": "1",
+    "t_end": "2",
+    "t_cancel": "0",
+}
 
 
 class Game:
@@ -49,8 +56,7 @@ class Game:
                 screen.display_msg("22_dontans", 2)
                 name = "Человек"
                 break
-            elif len(name) <= screen.ZONE_SCORE[5] // 2 - 1:
-                screen.display_msg("03_writing", 1)
+            elif len(name) <= 6 and len(name) >= 3:
                 break
             else:
                 screen.display_msg("25_badname")
@@ -125,6 +131,7 @@ class Game:
         # Установка рандомных значений для имеющихся костей
         for i in range(len(Game.dices)):
             Game.dices[i] = random.randint(1, 6)
+        temp_dices = Game.dices[:]  # сохрание костей (нужно далее)
 
         # Выводим на экран выпавшие кости
         screen.display_dices(Game.dices)
@@ -136,28 +143,28 @@ class Game:
             player.clear_scoreturn()
             screen.display_score(player, "turn")
             return -1
-        elif player.__type__ == "Human":
-            screen.display_msg("20_dicechoose")
-
-        # Инициализация текущих очков за текущее действие
-        action_score = 0
 
         # Цикл, повторяющийся до тех пор, пока игрок не совершит дейстие,
         # приносящее очки.
-        while action_score == 0:
+        while True:
+            pick_score = 0
             # ИИ/Человек берет в "руку" какие-то выпавшие кости
+            if player.__type__ == "Human":
+                screen.display_msg("20_dicechoose")
             hand = player.get_dicechoose()
+            screen.dices_highlightion(hand)
             # Происходят проверки на комбинации в руке, приносящие очки (поря-
             # док имеет значение!). Кости, приносящие очки, удаляются из руки
-            # и из основного списка костей класса Game.
+            # и из основного списка костей класса Game (но возвращаются из
+            # temp_dices, в случае повторного выбора).
 
             if self.check_combosrange(hand):
                 if 6 in hand:
-                    action_score += 1500
+                    pick_score += 1500
                     hand.clear()
                     Game.dices.clear()
                 else:
-                    action_score += 750
+                    pick_score += 750
                     for i in range(1, 6):
                         hand.remove(i)
                         Game.dices.remove(i)
@@ -173,7 +180,7 @@ class Game:
                         else:
                             score += dice*100
                         score *= (row_len - 2)
-                        action_score += score
+                        pick_score += score
 
                         for i in range(row_len):
                             hand.remove(dice)
@@ -183,28 +190,50 @@ class Game:
                 for dice in hand[:]:
 
                     if dice == 1:
-                        action_score += 100
+                        pick_score += 100
                         hand.remove(dice)
                         Game.dices.remove(dice)
 
                     elif dice == 5:
-                        action_score += 50
+                        pick_score += 50
                         hand.remove(dice)
                         Game.dices.remove(dice)
 
+            # Выводится сообщение, если никакие кости не принесли очков. Цикл
+            # выбора костей продолжается.
+            if pick_score == 0:
+                screen.dices_highlightion(hand, cp_id=4)
+                screen.display_msg("26_badalldice", 2)
+                continue
             # Выводится сообщение, если в руке остались кости, которые не при-
-            # несли очки. Они не удаляются и используются далее в игре.
-            if len(hand) > 0:
-                screen.display_msg("11_baddice", 3, hand)
+            # несли очки (они используются далее в игре).
+            elif len(hand) > 0:
+                screen.dices_highlightion(hand, cp_id=4)
+                screen.display_msg("11_baddice", 2)
+
+            # Отобрбажение очков, которые получти игрок за выбранные кости
+            screen.display_pick_score(pick_score)
+
+            # Игрок решает как посутпить дальше
+            action_choice = player.get_nextaction()
+
+            # Выделение выбранных костей и очки за кости убираются
+            screen.dices_highlightion()
+            screen.display_pick_score()
+
+            if action_choice == KEYCODES["t_cancel"]:
+                Game.dices = temp_dices[:]  # возвращение удаленных костей
+            else:
+                break
 
         # В конце цикла набранные очки за действие добавляются к очкам за ход.
         # На экран выводится информация о набранных очках.
-        player.add_scoreturn(action_score)
+        player.add_scoreturn(pick_score)
         screen.display_score(player, "turn")
-        screen.display_msg("09_scoreearn", 1.7, player.name, action_score)
+        screen.display_msg("09_scoreearn", 1.7, player.name, pick_score)
 
         # Проверка, хочет ли игрок закончить ход и сохранить набранные очки
-        if player.get_nextaction() is False:
+        if action_choice == KEYCODES["t_end"]:
             player.add_scoretotal()
             screen.display_score(player, "total")
             screen.display_score(player, "turn")
@@ -212,11 +241,13 @@ class Game:
                                player.score_total)
             self.check_win()
             return -2
-        # Если ход продолжается, происходи проверка, остались ли еще кости
-        elif len(Game.dices) == 0:
-            return 2
-        else:
-            return 1
+
+        elif action_choice == KEYCODES["t_continue"]:
+            # Если ход продолжается, происходи проверка, остались ли еще кости
+            if len(Game.dices) == 0:
+                return 2
+            else:
+                return 1
 
 
 class Player:
@@ -284,19 +315,17 @@ class Human(Player):
                 screen.display_msg("20_dicechoose")
 
     def get_nextaction(self):
-        """Узнает, готов ли игрок рискнуть продолжить ход (1/0)."""
+        """Узнает, готов ли игрок рискнуть продолжить ход."""
         screen = Player.screen
-        screen.display_msg("18_continue")
+        screen.display_msg("18_actchoose")
         while True:
             inp = screen.input_str()
 
-            if inp == "1":  # ДОПИЛИТЬ
-                return True
-            elif inp == "0":
-                return False
+            if inp in KEYCODES.values():
+                return inp
             else:
                 screen.display_msg("19_badans", 1)
-                screen.display_msg("18_continue")
+                screen.display_msg("18_actchoose")
 
 
 class Robot(Player):
@@ -421,6 +450,7 @@ class Robot(Player):
         choice = tools.randchance(chance_to_continue)
         if choice is True:
             Player.screen.display_msg("15_00_robturnT", 2)
+            return KEYCODES["t_continue"]
         else:
             Player.screen.display_msg("15_01_robrurnF", 2)
-        return choice
+            return KEYCODES["t_end"]
