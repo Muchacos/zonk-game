@@ -5,50 +5,16 @@ import random
 import time
 from curses import textpad
 
-MSG_REGISTRY = {
-    "01_hello": "Добро пожаловать в игру! %p Я буду вашим ведущим",
-    "02_name": "Как вас зовут?",
-    "04_00_maxp":
-                """%s, теперь введите максимальное число очков. %p Победит тот,
-                кто наберет столько же или больше""",
-    "04_01_errint": "We need a int",
-    "04_02_errval": "Bad idea, do it again",
-    "05_start": "Великолепно! Начинаем игру!",
-    "06_whoturn": "%s, твой ход",
-    "07_scoreturn": "%s, твои очки за ход: %s",
-    "08_scoretot": "%s, всего ты заработал: %s",
-    "09_scoreearn": "%s, ты заработал %s очков",
-    "10_nodice": "Нет ни одной комбинации!",
-    "11_baddice": "Некоторые кости не принесли вам очки",
-    "12_badpick": "Вы не можете выбрать эти кости!",
-    "13_enemy": "Ваш противник - робот по имени %s",
-    "14_robpick": "Робот взял эти кости: %s",
-    "15_00_robturnT": "Робот решил продолжить ход",
-    "15_01_robrurnF": "Робот решил закончить ход",
-    "16_won": "ПОЗДРАВЛЯЮ, %s!. ТЫ ПОБЕДИЛ!",
-    "17_gmend": "Game was alrady en",
-    "18_actchoose": """1 - продолжить ход, 2 - закончить ход,
-                    0 - выбрать другие кости""",
-    "19_badans": "Неправильный ответ",
-    "20_dicechoose": "Выберите кости",
-    "21_robthink": "Робот думает",
-    "22_dontans":
-                """Хорошо, можете не отвечать. %p Тогда я буду
-                называть вас 'Человек'""",
-    "25_badname": """Простите, но ваше имя не подходит. %p
-                  выберете что-то другое""",
-    "26_badalldice": "Никакие кости не принесли очков"
-}
+import data
 
-DICES = {
-    0: ["       ", "       ", "       ", "       "],
-    1: ["       ", "│     │", "│  ●  │", "│     │"],
-    2: ["       ", "│    ●│", "│     │", "│●    │"],
-    3: ["       ", "│●    │", "│  ●  │", "│    ●│"],
-    4: ["       ", "│●   ●│", "│     │", "│●   ●│"],
-    5: ["       ", "│●   ●│", "│  ●  │", "│●   ●│"],
-    6: ["       ", "│●   ●│", "│●   ●│", "│●   ●│"]
-}
+#   .d8888b.    .d8888b.   8888888b.   8888888888  8888888888  888b    888
+#  d88P  Y88b  d88P  Y88b  888   Y88b  888         888         8888b   888
+#  Y88b.       888    888  888    888  888         888         88888b  888
+#   "Y888b.    888         888   d88P  8888888     8888888     888Y88b 888
+#      "Y88b.  888         8888888P"   888         888         888 Y88b888
+#        "888  888    888  888 T88b    888         888         888  Y88888
+#  Y88b  d88P  Y88b  d88P  888  T88b   888         888         888   Y8888
+#   "Y8888P"    "Y8888P"   888   T88b  8888888888  8888888888  888    Y888
 
 
 class Screen:
@@ -154,6 +120,20 @@ class Screen:
         curses.init_pair(2, 26, 0)
         curses.init_pair(3, 39, 0)
         curses.init_pair(4, 12, 0)
+        curses.init_pair(5, 0, 15)
+
+#
+#        d8b                                888
+#        Y8P                                888
+#                                           888
+#        888  88888b.   88888b.   888  888  888888
+#        888  888 "88b  888 "88b  888  888  888
+#        888  888  888  888  888  888  888  888
+#        888  888  888  888 d88P  Y88b 888  Y88b.
+#        888  888  888  88888P"    "Y88888   "Y888  88888888
+#                       888
+#                       888
+#                       888
 
     def input_str(self):
         """Получает пользовательский ввод в зоне для ввода и возвращает его."""
@@ -209,14 +189,27 @@ class Screen:
         self.clear_zone(ZONE_INPUT)
         return inp
 
-    def display_msg(self, id, delay=0, *data):
+#
+#             888  d8b                      888
+#             888  Y8P                      888
+#             888                           888
+#         .d88888  888  .d8888b   88888b.   888   8888b.   888  888
+#        d88" 888  888  88K       888 "88b  888      "88b  888  888
+#        888  888  888  "Y8888b.  888  888  888  .d888888  888  888
+#        Y88b 888  888       X88  888 d88P  888  888  888  Y88b 888
+#         "Y88888  888   88888P'  88888P"   888  "Y888888   "Y88888  88888888
+#                                 888                           888
+#                                 888                      Y8b d88P
+#                                 888                       "Y88P"
+
+    def display_msg(self, id, delay=0, *insert):
         """Выводит сообщение из реестра на заданное время, вставляя данные."""
         stdscr = self.stdscr
         ZONE_MSG = Screen.ZONE_MSG
         y, x = ZONE_MSG[0], ZONE_MSG[1] + 1
-        msg = MSG_REGISTRY[id]
+        msg = data.MSG_REGISTRY[id]
         fill = 1  # заполненность текущей строки по x
-        data_idx = 0
+        insert_idx = 0
 
         # Отчищение зоны сообщений и перемещение курсора в ее начало
         self.clear_zone(ZONE_MSG)
@@ -225,8 +218,8 @@ class Screen:
         for word in msg.split():
             # Вставка данных по спец символу
             if word.startswith("%s"):                  # Учет возможных
-                word = str(data[data_idx]) + word[2:]  # знаков препинания.
-                data_idx += 1
+                word = str(insert[insert_idx]) + word[2:]  # знаков препинания.
+                insert_idx += 1
             # Пауза во вводе по спец символу
             elif word == "%p":
                 time.sleep(0.4)
@@ -278,7 +271,7 @@ class Screen:
         stdscr.attron(curses.color_pair(cp_id))  # Включение цвета печати
 
         # Построковая печать костей
-        for idx, line in enumerate(DICES[value]):
+        for idx, line in enumerate(data.ASCII_DICES[value]):
             # Печать первой строки с подчеркиваниями посередине, "крыша" кости
             if idx == 0 and value != 0:
                 stdscr.addstr(y, x + 1, line[:-2],
@@ -294,16 +287,6 @@ class Screen:
                 stdscr.addstr(y + idx, x, line)
 
         stdscr.attroff(curses.color_pair(cp_id))  # Отключение цвета печати
-
-    def display_players(self, game_mode):
-        """Печатает на экране имена игроков в зоне для очков."""
-        stdscr = self.stdscr
-        ZONE_SCORE = Screen.ZONE_SCORE
-        n1 = game_mode.player.name
-        n2 = game_mode.second_player.name
-        stdscr.addstr(ZONE_SCORE[0] + 1, ZONE_SCORE[1] + 5, n1)
-        stdscr.addstr(ZONE_SCORE[0] + 1, ZONE_SCORE[1] + 14, n2)
-        stdscr.refresh()
 
     def display_score(self, player, score_type):
         """Печатает очки игоков (по типу) в зоне для очков."""
@@ -339,6 +322,17 @@ class Screen:
         stdscr.addstr(ZONE_DICES[0] + ZONE_DICES[4] - 1,
                       ZONE_DICES[1] + 2, "= {}".format(score))
 
+#
+#                  888
+#                  888
+#                  888
+#         .d88b.   888  .d8888b    .d88b.
+#        d8P  Y8b  888  88K       d8P  Y8b
+#        88888888  888  "Y8888b.  88888888
+#        Y8b.      888       X88  Y8b.
+#         "Y8888   888   88888P'   "Y8888
+#
+
     def clear_zone(self, zone, back=" ", cp_id=0):
         """Принимает конст. ZONE_*, задний фон, цвет, и отчищает эту зону."""
         stdscr = self.stdscr
@@ -352,12 +346,22 @@ class Screen:
         self.stdscr.addstr(ZONE_SCORE[0] + 7, ZONE_SCORE[1] + 9, str(hbar),
                            curses.A_UNDERLINE)
 
-    def dices_highlightion(self, dices=[], *, cp_id=3):
+    def add_players(self, game_mode):
+        """Печатает на экране имена игроков в зоне для очков."""
+        stdscr = self.stdscr
+        ZONE_SCORE = Screen.ZONE_SCORE
+        name1, name2 = game_mode.player.name, game_mode.second_player.name
+
+        stdscr.addstr(ZONE_SCORE[0] + 1, ZONE_SCORE[1] + 5, name1)
+        stdscr.addstr(ZONE_SCORE[0] + 1, ZONE_SCORE[1] + 14, name2)
+
+        self.highlightion_players(game_mode)
+
+    def highlightion_dices(self, dices=[], *, cp_id=3):
         """Выделяет или снимает выделение с костей"""
         scr_dices = self.scr_dices[:]
         # Пустой массив dices означает, что нужно снять выделение.
         # Непустой - выделение создать.
-
         if dices != []:
             for value in dices:
                 position = scr_dices.index(value)
@@ -367,6 +371,24 @@ class Screen:
             for position, value in enumerate(scr_dices):
                 self.display_dice(position, value)
         self.stdscr.refresh()
+
+    def highlightion_players(self, game_mode):
+        """Выделяет имя текущего игрока."""
+        stdscr = self.stdscr
+        ZONE_SCORE = Screen.ZONE_SCORE
+        p1, p2 = game_mode.player, game_mode.second_player
+
+        if p1.__type__ == "Human":
+            stdscr.addstr(ZONE_SCORE[0] + 1, ZONE_SCORE[1] + 5,
+                          p1.name, curses.color_pair(5))
+            stdscr.addstr(ZONE_SCORE[0] + 1, ZONE_SCORE[1] + 14,
+                          p2.name, curses.color_pair(0))
+        elif p1.__type__ == "Robot":
+            stdscr.addstr(ZONE_SCORE[0] + 1, ZONE_SCORE[1] + 14,
+                          p1.name, curses.color_pair(5))
+            stdscr.addstr(ZONE_SCORE[0] + 1, ZONE_SCORE[1] + 5,
+                          p2.name, curses.color_pair(0))
+        stdscr.refresh()
 
     def ending(self):
         """Проигрывает анимацию сдвига экрана вверх."""

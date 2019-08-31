@@ -1,13 +1,17 @@
 """Тут содержатся все классы, составляющие игровую логику."""
 import random
 
+import data
 import tools
 
-KEYCODES = {
-    "t_continue": "1",
-    "t_end": "2",
-    "t_cancel": "0",
-}
+#   .d8888b.         d8888  888b     d888  8888888888
+#  d88P  Y88b       d88888  8888b   d8888  888
+#  888    888      d88P888  88888b.d88888  888
+#  888            d88P 888  888Y88888P888  8888888
+#  888  88888    d88P  888  888 Y888P 888  888
+#  888    888   d88P   888  888  Y8P  888  888
+#  Y88b  d88P  d8888888888  888   "   888  888
+#   "Y8888P88 d88P     888  888       888  8888888888
 
 
 class Game:
@@ -43,7 +47,7 @@ class Game:
 
     game_flag = True
     screen = None
-    dices = [1]*6
+    dices = [1] * 6
 
     def __init__(self, screen):
         """Инициализация со вступлением."""
@@ -63,7 +67,7 @@ class Game:
         self.player = Human(self, screen, name)
         self.second_player = Robot(self, screen, "zX01")
         screen.display_msg("13_enemy", 2, self.second_player.name)
-        screen.display_players(self)
+        screen.add_players(self)
         screen.display_msg("04_00_maxp", 0, self.player.name)
         while True:
             hbar = screen.input_str()
@@ -79,6 +83,7 @@ class Game:
     def switch_player(self):
         """Меняет игроков местами."""
         self.player, self.second_player = self.second_player, self.player
+        Game.screen.highlightion_players(self)
         Game.screen.display_msg("06_whoturn", 1.5, self.player.name)
 
     def check_win(self):
@@ -103,11 +108,21 @@ class Game:
         """Возвращает True, если среди костей есть хотя бы одна комбинация."""
         d = Game.dices
         return any((self.check_combosrow(d), self.check_combosrange(d),
-                   self.check_combossingle(d)))
+                    self.check_combossingle(d)))
 
     def add_dices(self):
         """Добавляет недостающие кости (до 6 штук)."""
-        Game.dices.extend([1]*(6 - len(Game.dices)))
+        Game.dices.extend([1] * (6 - len(Game.dices)))
+
+#
+#                            888     d8b
+#                            888     Y8P
+#                            888
+#         8888b.    .d8888b  888888  888   .d88b.   88888b.
+#            "88b  d88P"     888     888  d88""88b  888 "88b
+#        .d888888  888       888     888  888  888  888  888
+#        888  888  Y88b.     Y88b.   888  Y88..88P  888  888
+#        "Y888888   "Y8888P   "Y888  888   "Y88P"   888  888
 
     def action(self):
         """Совершение действия в ход. Возвращает исход действия в числе.
@@ -139,7 +154,7 @@ class Game:
         # Проверк может ли игрок совершить действие. Если нет, ход заканчива-
         # ется автоматически, и игрок теряет очки.
         if self.check_combos() is False:
-            screen.display_msg("10_nodice", 3.5)
+            screen.display_msg("10_nodice", 2.5)
             player.clear_scoreturn()
             screen.display_score(player, "turn")
             return -1
@@ -152,7 +167,7 @@ class Game:
             if player.__type__ == "Human":
                 screen.display_msg("20_dicechoose")
             hand = player.get_dicechoose()
-            screen.dices_highlightion(hand)
+            screen.highlightion_dices(hand)
             # Происходят проверки на комбинации в руке, приносящие очки (поря-
             # док имеет значение!). Кости, приносящие очки, удаляются из руки
             # и из основного списка костей класса Game (но возвращаются из
@@ -178,7 +193,7 @@ class Game:
                         if dice == 1:
                             score += 1000
                         else:
-                            score += dice*100
+                            score += dice * 100
                         score *= (row_len - 2)
                         pick_score += score
 
@@ -202,13 +217,13 @@ class Game:
             # Выводится сообщение, если никакие кости не принесли очков. Цикл
             # выбора костей продолжается.
             if pick_score == 0:
-                screen.dices_highlightion(hand, cp_id=4)
+                screen.highlightion_dices(hand, cp_id=4)
                 screen.display_msg("26_badalldice", 2)
                 continue
             # Выводится сообщение, если в руке остались кости, которые не при-
             # несли очки (они используются далее в игре).
             elif len(hand) > 0:
-                screen.dices_highlightion(hand, cp_id=4)
+                screen.highlightion_dices(hand, cp_id=4)
                 screen.display_msg("11_baddice", 2)
 
             # Отобрбажение очков, которые получти игрок за выбранные кости
@@ -218,10 +233,10 @@ class Game:
             action_choice = player.get_nextaction()
 
             # Выделение выбранных костей и очки за кости убираются
-            screen.dices_highlightion()
+            screen.highlightion_dices()
             screen.display_pick_score()
 
-            if action_choice == KEYCODES["t_cancel"]:
+            if action_choice == data.KEYCODES["t_cancel"]:
                 Game.dices = temp_dices[:]  # возвращение удаленных костей
             else:
                 break
@@ -230,10 +245,10 @@ class Game:
         # На экран выводится информация о набранных очках.
         player.add_scoreturn(pick_score)
         screen.display_score(player, "turn")
-        screen.display_msg("09_scoreearn", 1.7, player.name, pick_score)
+        screen.display_msg("09_scoreearn", 2, player.name, pick_score)
 
         # Проверка, хочет ли игрок закончить ход и сохранить набранные очки
-        if action_choice == KEYCODES["t_end"]:
+        if action_choice == data.KEYCODES["t_end"]:
             player.add_scoretotal()
             screen.display_score(player, "total")
             screen.display_score(player, "turn")
@@ -242,12 +257,22 @@ class Game:
             self.check_win()
             return -2
 
-        elif action_choice == KEYCODES["t_continue"]:
+        elif action_choice == data.KEYCODES["t_continue"]:
             # Если ход продолжается, происходи проверка, остались ли еще кости
             if len(Game.dices) == 0:
                 return 2
             else:
                 return 1
+
+
+#  8888888b.   888             d8888  Y88b   d88P  8888888888  8888888b.
+#  888   Y88b  888            d88888   Y88b d88P   888         888   Y88b
+#  888    888  888           d88P888    Y88o88P    888         888    888
+#  888   d88P  888          d88P 888     Y888P     8888888     888   d88P
+#  8888888P"   888         d88P  888      888      888         8888888P"
+#  888         888        d88P   888      888      888         888 T88b
+#  888         888       d8888888888      888      888         888  T88b
+#  888         88888888 d88P     888      888      8888888888  888   T88b
 
 
 class Player:
@@ -289,6 +314,16 @@ class Player:
         self.score_turn = 0
 
 
+#  888    888  888     888  888b     d888         d8888  888b    888
+#  888    888  888     888  8888b   d8888        d88888  8888b   888
+#  888    888  888     888  88888b.d88888       d88P888  88888b  888
+#  8888888888  888     888  888Y88888P888      d88P 888  888Y88b 888
+#  888    888  888     888  888 Y888P 888     d88P  888  888 Y88b888
+#  888    888  888     888  888  Y8P  888    d88P   888  888  Y88888
+#  888    888  Y88b. .d88P  888   "   888   d8888888888  888   Y8888
+#  888    888   "Y88888P"   888       888  d88P     888  888    Y888
+
+
 class Human(Player):
     """Представляет игрока по ту сторону экрана.
 
@@ -307,8 +342,8 @@ class Human(Player):
         while True:
             inp = screen.input_str()
             # Проверка, есть ли все выбранные кости среди выпавших костей
-            if (inp.isdigit() and
-               all(inp.count(d) <= dices.count(int(d)) for d in inp)):
+            if (inp.isdigit()
+                    and all(inp.count(d) <= dices.count(int(d)) for d in inp)):
                 return [int(d) for d in inp]
             else:
                 screen.display_msg("12_badpick", 1)
@@ -321,12 +356,21 @@ class Human(Player):
         while True:
             inp = screen.input_str()
 
-            if inp in KEYCODES.values():
+            if inp in data.KEYCODES.values():
                 return inp
             else:
                 screen.display_msg("19_badans", 1)
                 screen.display_msg("18_actchoose")
 
+
+#  8888888b.    .d88888b.   888888b.     .d88888b.  88888888888
+#  888   Y88b  d88P" "Y88b  888  "88b   d88P" "Y88b     888
+#  888    888  888     888  888  .88P   888     888     888
+#  888   d88P  888     888  8888888K.   888     888     888
+#  8888888P"   888     888  888  "Y88b  888     888     888
+#  888 T88b    888     888  888    888  888     888     888
+#  888  T88b   Y88b. .d88P  888   d88P  Y88b. .d88P     888
+#  888   T88b   "Y88888P"   8888888P"    "Y88888P"      888
 
 class Robot(Player):
     """Представляет ИИ.
@@ -391,8 +435,8 @@ class Robot(Player):
             if gm.check_combossingle(dices):
                 # Забирам их при условии, что всего косей меньше трех
                 # (+ шанс 60%) или с шансом 25%.
-                if (len(dices) < 3 and tools.randchance(60) or
-                   tools.randchance(25)):
+                if (len(dices) < 3 and tools.randchance(60)
+                        or tools.randchance(25)):
                     self.take_single(dices, claw)
 
         # Забирам все единичные кости, если остались только они
@@ -413,13 +457,13 @@ class Robot(Player):
             else:
                 self.take_single(dices, claw, 1)
 
-        delay = random.randint(1, 3) * -1
+        delay = (random.uniform(0.7, 1.5) + len(dices) / 10) * -1
         Player.screen.display_msg("21_robthink", delay)
-        Player.screen.display_msg("14_robpick", 2, claw)
         return claw
 
     def get_nextaction(self):
         """Узнает, готов ли робот рискнуть продолжить ход."""
+
         # Возвращает шанс продолжить ход по графику y = -2.5(x-200)^1/2 + 100
         def chance_curve(x):
             if x < 200:
@@ -427,7 +471,7 @@ class Robot(Player):
             elif x > 1800:
                 y = 0
             else:
-                y = round(-2.5*(x-200)**(1/2)+100)
+                y = round(-2.5 * (x - 200)**(1 / 2) + 100)
             return y
 
         dices = Player.gm.dices
@@ -449,8 +493,8 @@ class Robot(Player):
 
         choice = tools.randchance(chance_to_continue)
         if choice is True:
-            Player.screen.display_msg("15_00_robturnT", 2)
-            return KEYCODES["t_continue"]
+            Player.screen.display_msg("15_00_robturnT", 2.5)
+            return data.KEYCODES["t_continue"]
         else:
-            Player.screen.display_msg("15_01_robrurnF", 2)
-            return KEYCODES["t_end"]
+            Player.screen.display_msg("15_01_robrurnF", 2.5)
+            return data.KEYCODES["t_end"]
