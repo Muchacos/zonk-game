@@ -39,8 +39,8 @@ class Game:
     check_combos -- проверяет, есть ли хоть одно комбо среди костей
     (check_combosrow,
     check_combosrange,
-    check_combossingle) -- проверка разных комбинаций
-    add_dices -- добавляет кости
+    check_combossingle) -- проверка комбинаций среди костей
+    add_dices -- добавляет недостающие кости
     action -- основной функционал действия
 
     """
@@ -151,23 +151,21 @@ class Game:
         # Выводим на экран выпавшие кости
         screen.display_dices(Game.dices)
 
-        # Проверк может ли игрок совершить действие. Если нет, ход заканчива-
-        # ется автоматически, и игрок теряет очки.
+        # Проверка, есть ли хоть какие-то кости, приносящие очки.
+        # Если нет, ход заканчивается автоматически, и игрок теряет очки.
         if self.check_combos() is False:
             screen.display_msg("10_nodice", 2.5)
             player.clear_scoreturn()
-            screen.display_score(player, "turn")
             return -1
 
-        # Цикл, повторяющийся до тех пор, пока игрок не совершит дейстие,
-        # приносящее очки.
+        # Цикл взятия косей игроком
         while True:
             pick_score = 0
             # ИИ/Человек берет в "руку" какие-то выпавшие кости
             if player.__type__ == "Human":
                 screen.display_msg("20_dicechoose")
             hand = player.get_dicechoose()
-            screen.highlightion_dices(hand)
+            screen.highlightion_dices(hand)  # выделение выбранных костей
             # Происходят проверки на комбинации в руке, приносящие очки (поря-
             # док имеет значение!). Кости, приносящие очки, удаляются из руки
             # и из основного списка костей класса Game (но возвращаются из
@@ -214,44 +212,48 @@ class Game:
                         hand.remove(dice)
                         Game.dices.remove(dice)
 
-            # Выводится сообщение, если никакие кости не принесли очков. Цикл
-            # выбора костей продолжается.
+            # Выводится сообщение, если никакие кости не принесли очков.
+            # Цикл тут же начинается сначала.
             if pick_score == 0:
+                # Выделение "плохих" костей
                 screen.highlightion_dices(hand, cp_id=4)
                 screen.display_msg("26_badalldice", 2)
+                screen.highlightion_dices()
                 continue
             # Выводится сообщение, если в руке остались кости, которые не при-
-            # несли очки (они используются далее в игре).
+            # несли очки (но они используются далее в игре).
             elif len(hand) > 0:
                 screen.highlightion_dices(hand, cp_id=4)
                 screen.display_msg("11_baddice", 2)
 
-            # Отобрбажение очков, которые получти игрок за выбранные кости
-            screen.display_pick_score(pick_score)
-
+            # Добавление очков за выбранные кости
+            player.add_scorepick(pick_score)
             # Игрок решает как посутпить дальше
             action_choice = player.get_nextaction()
-
-            # Выделение выбранных костей и очки за кости убираются
+            # Снимается выделение с выбранных костей
             screen.highlightion_dices()
-            screen.display_pick_score()
 
+            # При отмене выбора, цикл продолжается
             if action_choice == data.KEYCODES["t_cancel"]:
                 Game.dices = temp_dices[:]  # возвращение удаленных костей
+                player.clear_scorepick()
+            # Если игрок согласен использовать выбранные кости,
+            # то они скрываются.
             else:
+                removed_dices = tools.exclude_array(temp_dices, Game.dices)
+                screen.highlightion_dices(removed_dices, cp_id=6)
                 break
 
-        # В конце цикла набранные очки за действие добавляются к очкам за ход.
+        # После цикла очки за кости добавляются к очкам за ход.
         # На экран выводится информация о набранных очках.
-        player.add_scoreturn(pick_score)
-        screen.display_score(player, "turn")
+        player.add_scoreturn()
         screen.display_msg("09_scoreearn", 2, player.name, pick_score)
 
-        # Проверка, хочет ли игрок закончить ход и сохранить набранные очки
+        # Если игрок хочет закончить ход и сохнанить набранные очки:
         if action_choice == data.KEYCODES["t_end"]:
+            # Убираем оставшиеся кости. Новый игрок - чистый стол
+            screen.highlightion_dices(Game.dices, cp_id=6)
             player.add_scoretotal()
-            screen.display_score(player, "total")
-            screen.display_score(player, "turn")
             screen.display_msg("08_scoretot", 2, player.name,
                                player.score_total)
             self.check_win()
@@ -286,6 +288,12 @@ class Player:
     name -- имя игрока
     score_total -- итоговое число очков
     score_turn -- число очков за ход
+    score_pick -- число очков за выбранные кости
+
+    Методы:
+    (add_*score_type*
+    clear_*score_type*) -- добавление/удаление очков. Все изменения
+                           отображаются на экране.
 
     """
 
@@ -299,19 +307,35 @@ class Player:
         self.name = name
         self.score_total = 0
         self.score_turn = 0
+        self.score_pick = 0
 
     def add_scoretotal(self):
         """Добавляет score_turn к score_total."""
         self.score_total += self.score_turn
         self.score_turn = 0
+        Player.screen.display_score(self, "turn")  # удаление очков с экрана
+        Player.screen.display_score(self, "total")
 
-    def add_scoreturn(self, score):
-        """Увеличивает score_turn на значение score."""
-        self.score_turn += score
+    def add_scoreturn(self):
+        """Перемещает score_pick в score_turn."""
+        self.score_turn += self.score_pick
+        self.score_pick = 0
+        Player.screen.display_score(self, "pick")  # удаление очков с экрана
+        Player.screen.display_score(self, "turn")
+
+    def add_scorepick(self, score):
+        """Увеличивает score_pick на score"""
+        self.score_pick += score
+        Player.screen.display_score(self, "pick")
 
     def clear_scoreturn(self):
         """Отчищает score_turn (очки за ход)."""
         self.score_turn = 0
+        Player.screen.display_score(self, "turn")
+
+    def clear_scorepick(self):
+        self.score_pick = 0
+        Player.screen.display_score(self, "pick")
 
 
 #  888    888  888     888  888b     d888         d8888  888b    888
@@ -482,7 +506,8 @@ class Robot(Player):
 
         # Если текущее кол-во очнов больше кол-ва очков для победы, то
         # продолжать ход и рисковать не имеет смысла.
-        if self.score_total + self.score_turn >= Player.gm.high_bar:
+        if (self.score_total + self.score_turn
+            + self.score_pick >= Player.gm.high_bar):
             chance_to_continue = 0
         elif len(dices) == 0:
             chance_to_continue += 90

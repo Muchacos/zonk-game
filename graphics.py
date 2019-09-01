@@ -35,15 +35,23 @@ class Screen:
     DICES_POSITIONS -- Позиции костей (верхний левый угол) в зоне для костей
 
     Методы:
-    init_pairs -- пнициализация цветовых пар
+    Тип display_:
+        Функции для частого отображения различных данных на экране
+        display_msg -- посимвольно выводит на экран сообщения из реестра
+        display_dices -- выводит на экран игральные кости
+        display_dice -- выводит на экран одну кость с параметрами
+        display_score -- выводит/убирает с экрана очки игрока
+    Тип add_:
+        Функции, добавляющие на экран неизменяемые данные. Обычно используются
+        единожды в начале игры.
+        add_players -- добавляет на экран имена игроков
+        add_high_bar -- добавляет на экран очки, необходимые для победы
+
+    init_pairs -- инициализация цветовых пар (используемых цветов)
     clear_zone -- отчищает указанную игровую зону
     input_str -- возвращает пользовательский ввод
-    display_players -- выводит на экран имена игроков
-    display_dices -- выводит на экран игральные кости
-    display_score -- выводит на экран заработанные очки
-    display_msg -- выводит на экран сообщения из реестра
-    add_high_bar -- выводит на экран число очков для победы
-    ending -- показывает анимацию исчезания окна
+    highlightion_players -- отвечает за выделеине имен игроков
+    highlightion_dices -- отвечает за выделение отображаемых костей
 
     """
 
@@ -86,8 +94,8 @@ class Screen:
 
         self.clear_zone((0, 0, SH - 2, SW - 2, SH, SW), "∙", 2)
 
-        for zone, txt in ([ZONE_DICES, "┤кости├"], [ZONE_SCORE, "┤очки├"],
-                          [ZONE_INPUT, "┤ввод├"], [ZONE_MSG, "┤сообщения├"]):
+        for zone, txt in ([ZONE_DICES, "┤dices├"], [ZONE_SCORE, "┤score├"],
+                          [ZONE_INPUT, "┤input├"], [ZONE_MSG, "┤msg├"]):
             uy, lx = zone[0] - 1, zone[1] - 1
             ly, rx = zone[2] + 1, zone[3] + 1
             textpad.rectangle(stdscr, uy, lx, ly, rx)
@@ -98,11 +106,15 @@ class Screen:
             stdscr.addstr(uy, rx - len(txt) - 2, txt)
             self.clear_zone(zone)
 
-        stdscr.addstr(ZONE_SCORE[0] + 3, ZONE_SCORE[1] + 1,
-                      "Общ _____    _____")
-        stdscr.addstr(ZONE_SCORE[0] + 5, ZONE_SCORE[1] + 1,
-                      "Ход _____    _____")
-        stdscr.addstr(ZONE_SCORE[0] + 7, ZONE_SCORE[1] + 1, "Поб     _____")
+        scoretxt1 = " Tot _____    _____ "
+        scoretxt2 = " Tur _____    _____ "
+        scoretxt3 = "     +        +     "
+        scoretxt4 = " Win     _____      "
+        stdscr.addstr(ZONE_SCORE[0] + 3, ZONE_SCORE[1], scoretxt1)
+        stdscr.addstr(ZONE_SCORE[0] + 5, ZONE_SCORE[1], scoretxt2)
+        stdscr.addstr(ZONE_SCORE[0] + 6, ZONE_SCORE[1], scoretxt3)
+        stdscr.addstr(ZONE_SCORE[0] + 7, ZONE_SCORE[1], scoretxt4)
+
         stdscr.addstr(ZONE_INPUT[0], ZONE_INPUT[1] - 1, ">")
 
         stdscr.refresh()
@@ -121,6 +133,7 @@ class Screen:
         curses.init_pair(3, 39, 0)
         curses.init_pair(4, 12, 0)
         curses.init_pair(5, 0, 15)
+        curses.init_pair(6, 0, 0)
 
 #
 #        d8b                                888
@@ -225,10 +238,13 @@ class Screen:
                 time.sleep(0.4)
                 continue
 
-            # Переход на новую строку при переполнении предыдущей
-            if fill + len(word) + 1 > ZONE_MSG[5]:
-                stdscr.move(y + 1, x)
+            # Переход на новую строку при переполнении или по спец символу
+            if fill + len(word) + 1 >= ZONE_MSG[5] or word == "%n":
+                y += 1
                 fill = 1
+                stdscr.move(y, x)
+                if word == "%n":
+                    continue
 
             # Посимвольный ввод слова
             for alpha in word + " ":
@@ -248,7 +264,7 @@ class Screen:
             time.sleep(abs(delay))
 
     def display_dices(self, dices):
-        """Выводит на экран кости из списка dices."""
+        """Выводит на экран кости из списка dices в случайные позиции."""
         self.scr_dices = [0] * 6
         scr_dices = self.scr_dices
 
@@ -264,7 +280,7 @@ class Screen:
             self.display_dice(position, value)
         self.stdscr.refresh()
 
-    def display_dice(self, position, value, cp_id=-1):
+    def display_dice(self, position, value, cp_id=0):
         """Отображает кость со значением value в координатах y и x."""
         stdscr = self.stdscr
         y, x = Screen.DICES_POSITIONS[position]
@@ -276,7 +292,7 @@ class Screen:
             if idx == 0 and value != 0:
                 stdscr.addstr(y, x + 1, line[:-2],
                               curses.color_pair(cp_id) + curses.A_UNDERLINE)
-            # Печать последней строки с подчеркиваниями посередине,"дно" кости
+            # Печать последней строки с подчеркиваниями посередине, "дно" кости
             elif idx == 3 and value != 0:
                 stdscr.addstr(y + idx, x, line,
                               curses.color_pair(cp_id) + curses.A_UNDERLINE)
@@ -300,27 +316,29 @@ class Screen:
         elif score_type == "turn":
             score = player.score_turn
             y = ZONE_SCORE[0] + 5
+        elif score_type == "pick":
+            score = player.score_pick
+            y = ZONE_SCORE[0] + 6
 
         # Определение столбца (для каждого свой игрок)
-        if player.__type__ == "Robot":
-            x = ZONE_SCORE[1] + 14
-        elif player.__type__ == "Human":
+        if player.__type__ == "Human":
             x = ZONE_SCORE[1] + 5
+        else:
+            x = ZONE_SCORE[1] + 14
 
         if score != 0:
-            stdscr.addstr(y, x, str(score), curses.A_UNDERLINE)
+            if score_type == "pick":
+                stdscr.addstr(y, x, "+{}".format(score), curses.color_pair(3))
+            else:
+                stdscr.addstr(y, x, str(score), curses.A_UNDERLINE)
         else:
-            stdscr.addstr(y, x, "_____")  # отчищение строки, если очков нет
+            # Отчищение строки, если очков нет
+            if score_type == "pick":
+                stdscr.addstr(y, x, "+" + " " * 5)
+            else:
+                stdscr.addstr(y, x, "_____")
         stdscr.refresh()
 
-    def display_pick_score(self, score=0):
-        """Отображает очки, которые приносят выбранные кости"""
-        stdscr = self.stdscr
-        ZONE_DICES = Screen.ZONE_DICES
-        stdscr.addstr(ZONE_DICES[0] + ZONE_DICES[4] - 1,
-                      ZONE_DICES[1], " " * ZONE_DICES[5])
-        stdscr.addstr(ZONE_DICES[0] + ZONE_DICES[4] - 1,
-                      ZONE_DICES[1] + 2, "= {}".format(score))
 
 #
 #                  888

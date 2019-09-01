@@ -1,1 +1,2 @@
-.env\Scripts\python game.py
+python game.py
+pause
