@@ -71,7 +71,7 @@ class Game:
         screen.display_msg("04_00_maxp", 0, self.player.name)
         while True:
             hbar = screen.input_str()
-            if hbar.isdigit() and int(hbar) > 100 and int(hbar) < 30000:
+            if hbar.isdigit() and int(hbar) >= 400 and int(hbar) < 30000:
                 self.high_bar = int(hbar)
                 break
             else:
@@ -83,7 +83,7 @@ class Game:
     def switch_player(self):
         """Меняет игроков местами."""
         self.player, self.second_player = self.second_player, self.player
-        Game.screen.highlightion_players(self)
+        Game.screen.anim_playerhl(self)
         Game.screen.display_msg("06_whoturn", 1.5, self.player.name)
 
     def check_win(self):
@@ -143,7 +143,8 @@ class Game:
         screen = Game.screen
         player = self.player
 
-        # Установка рандомных значений для имеющихся костей
+        # Установка рандомных значений для имеющихся костей и анимация броска
+        screen.anim_diceroll(len(Game.dices))
         for i in range(len(Game.dices)):
             Game.dices[i] = random.randint(1, 6)
         temp_dices = Game.dices[:]  # сохрание костей (нужно далее)
@@ -252,7 +253,7 @@ class Game:
         # Если игрок хочет закончить ход и сохнанить набранные очки:
         if action_choice == data.KEYCODES["t_end"]:
             # Убираем оставшиеся кости. Новый игрок - чистый стол
-            screen.highlightion_dices(Game.dices, cp_id=6)
+            screen.highlightion_dices(screen.scr_dices, cp_id=6)
             player.add_scoretotal()
             screen.display_msg("08_scoretot", 2, player.name,
                                player.score_total)
@@ -507,7 +508,7 @@ class Robot(Player):
         # Если текущее кол-во очнов больше кол-ва очков для победы, то
         # продолжать ход и рисковать не имеет смысла.
         if (self.score_total + self.score_turn
-            + self.score_pick >= Player.gm.high_bar):
+           + self.score_pick >= Player.gm.high_bar):
             chance_to_continue = 0
         elif len(dices) == 0:
             chance_to_continue += 90

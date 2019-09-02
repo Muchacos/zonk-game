@@ -53,6 +53,11 @@ class Screen:
     highlightion_players -- отвечает за выделеине имен игроков
     highlightion_dices -- отвечает за выделение отображаемых костей
 
+    Tип anim_:
+        Функции, проигрывающие анимации
+        anim_diceroll -- анимация броска костей
+        anim_playerhl -- анимация подсветки текущего игрока
+
     """
 
     SH, SW = 30, 70
@@ -339,7 +344,6 @@ class Screen:
                 stdscr.addstr(y, x, "_____")
         stdscr.refresh()
 
-
 #
 #                  888
 #                  888
@@ -349,7 +353,6 @@ class Screen:
 #        88888888  888  "Y8888b.  88888888
 #        Y8b.      888       X88  Y8b.
 #         "Y8888   888   88888P'   "Y8888
-#
 
     def clear_zone(self, zone, back=" ", cp_id=0):
         """Принимает конст. ZONE_*, задний фон, цвет, и отчищает эту зону."""
@@ -416,3 +419,76 @@ class Screen:
             stdscr.deleteln()
             stdscr.refresh()
             time.sleep(0.04)
+
+#
+#                            d8b
+#                            Y8P
+#
+#         8888b.   88888b.   888  88888b.d88b.
+#            "88b  888 "88b  888  888 "888 "88b
+#        .d888888  888  888  888  888  888  888
+#        888  888  888  888  888  888  888  888
+#        "Y888888  888  888  888  888  888  888  88888888
+
+    def animbase_savezone(self, zone):
+        """Возвращает масив данных по каждому симолу в заданной зоне.
+        0 - 'y' символа, 1 - 'x' символа,
+        2 - код символа, 3 - его аттрибут.
+
+        """
+
+        char_zone = []
+        for y in range(zone[4]):
+            for x in range(zone[5]):
+                # Получение битовых данных по каждому символу, их разбиение
+                # и запись в возвращаемый массив.
+                char_data = self.stdscr.inch(zone[0] + y, zone[1] + x)
+                char = char_data % 256
+                attr = char_data // 256
+                char_zone.append((zone[0] + y, zone[1] + x, char, attr))
+        return char_zone
+
+    def anim_diceroll(self, num_of_dices):
+        """Проигрывает анимацию броска костей."""
+        rand_dices = []
+        # Случайный выбор переданного кол-во костей и их быстрое отображение
+        for k in range(10):
+            rand_dices = [random.randint(1, 6) for i in range(num_of_dices)]
+            self.display_dices(rand_dices)
+            time.sleep(0.1)
+
+    def anim_playerhl(self, game_mode):  # ПОФИКСИТЬ
+        """Плавно перемещает выделение с предыдущего на текущего игрока."""
+        stdscr = self.stdscr
+        ZONE_SCORE = Screen.ZONE_SCORE
+        y = ZONE_SCORE[0] + 1
+
+        # Если текущий игрок - человек, то выделение перемещается справо
+        # налево (с робота на человека). В обратном случае, наоборот.
+        if game_mode.player.__type__ == "Human":
+            p_hum, p_rob = game_mode.player, game_mode.second_player
+            for i in range(10):
+                # Установка x_forward для выделения,  x_backward для его снятия
+                x_f = ZONE_SCORE[1] + 14 - i
+                x_b = ZONE_SCORE[1] + 14 + len(p_rob.name) - i
+
+                stdscr.chgat(y, x_f, 1, curses.color_pair(5))
+                # Ограничение, чтобы выделения не снималось с имени человека
+                if x_b >= ZONE_SCORE[1] + 5 + len(p_hum.name):
+                    stdscr.chgat(y, x_b, 1, curses.color_pair(0))
+
+                stdscr.refresh()
+                time.sleep(0.05)
+        else:
+            p_hum, p_rob = game_mode.second_player, game_mode.player
+            for i in range(9):
+                x_f = ZONE_SCORE[1] + 5 + len(p_hum.name) + i
+                x_b = ZONE_SCORE[1] + 5 + i
+
+                # Ограничение, чтобы выделение не залезало за имя робота
+                if x_f < ZONE_SCORE[1] + 14 + len(p_rob.name):
+                    stdscr.chgat(y, x_f, 1, curses.color_pair(5))
+                stdscr.chgat(y, x_b, 1, curses.color_pair(0))
+
+                stdscr.refresh()
+                time.sleep(0.05)
