@@ -207,6 +207,19 @@ class Screen:
         self.clear_zone(ZONE_INPUT)
         return inp
 
+    def input_delayinterrupt(self, delay):
+        """Создает задержку. Возвращает True, при прерывании её нажатием."""
+        stdscr = self.stdscr
+        curses.flushinp()
+        stdscr.timeout(round(delay * 1000))
+        key = stdscr.getch()
+        stdscr.timeout(-1)
+
+        if key == -1:
+            return False
+        else:
+            return True
+
 #
 #             888  d8b                      888
 #             888  Y8P                      888
@@ -220,51 +233,64 @@ class Screen:
 #                                 888                      Y8b d88P
 #                                 888                       "Y88P"
 
-    def display_msg(self, id, delay=0, *insert):
-        """Выводит сообщение из реестра на заданное время, вставляя данные."""
+    def display_msg(self, id, delay=0, *insert, speedup=1):
+        """Печатает сообщение из реестра на заданное время, вставляя данные."""
         stdscr = self.stdscr
         ZONE_MSG = Screen.ZONE_MSG
-        y, x = ZONE_MSG[0], ZONE_MSG[1] + 1
         msg = data.MSG_REGISTRY[id]
-        fill = 1  # заполненность текущей строки по x
-        insert_idx = 0
+        ch_print_delay = round(0.02 / speedup, 3)
 
-        # Отчищение зоны сообщений и перемещение курсора в ее начало
-        self.clear_zone(ZONE_MSG)
-        stdscr.move(y, x)
+        if delay < 0:
+            can_skip = False
+        else:
+            can_skip = True
 
-        for word in msg.split():
-            # Вставка данных по спец символу
-            if word.startswith("%s"):                  # Учет возможных
-                word = str(insert[insert_idx]) + word[2:]  # знаков препинания.
-                insert_idx += 1
-            # Пауза во вводе по спец символу
-            elif word == "%p":
-                time.sleep(0.4)
-                continue
+        def printing_with_animation(with_animation):
+            y, x_start = ZONE_MSG[0], ZONE_MSG[1] + 1
+            insert_idx = 0
+            fill = 1  # заполненность текущей строки по x
 
-            # Переход на новую строку при переполнении или по спец символу
-            if fill + len(word) + 1 >= ZONE_MSG[5] or word == "%n":
-                y += 1
-                fill = 1
-                stdscr.move(y, x)
-                if word == "%n":
+            # Отчищение зоны сообщений и перемещение курсора в ее начало
+            self.clear_zone(ZONE_MSG)
+            stdscr.move(y, x_start)
+
+            for word in msg.split():
+                if word.startswith("%s"):
+                    word = str(insert[insert_idx]) + word[2:]
+                    insert_idx += 1
+                elif word == "%p":
+                    if with_animation is True:
+                        time.sleep(0.2)
                     continue
 
-            # Посимвольный ввод слова
-            for alpha in word + " ":
-                stdscr.addch(alpha)
-                stdscr.refresh()
-                time.sleep(0.02)
-            fill += len(word) + 1
+                if fill + len(word) + 1 >= ZONE_MSG[5] or word == "%n":
+                    y += 1
+                    fill = 1
+                    stdscr.move(y, x_start)
+                    if word == "%n":
+                        continue
+
+                if with_animation is True:
+                    result = self.anim_percharword(word, ch_print_delay,
+                                                   can_skip)
+                    if result != 0:
+                        return -1
+                else:
+                    stdscr.addstr(word + " ")
+                fill += len(word) + 1
+
+            return 0
+
+        result = printing_with_animation(True)
+        if result != 0:
+            printing_with_animation(False)
 
         # Если задержка - положительное число, то ее можно прервать нажатием
         # клавиши. Если отрицательное - прервать ее нельзя.
         if delay > 0:
-            curses.flushinp()
-            stdscr.timeout(round(delay * 1000))
-            stdscr.getch()
-            stdscr.timeout(-1)
+            if self.input_delayinterrupt(delay) is False:
+                curs_y, curs_x = stdscr.getyx()
+                self.anim_arrowflick(curs_y, curs_x + 1)
         else:
             time.sleep(abs(delay))
 
@@ -379,7 +405,7 @@ class Screen:
         self.highlightion_players(game_mode)
 
     def highlightion_dices(self, dices=[], *, cp_id=3):
-        """Выделяет или снимает выделение с костей"""
+        """Выделяет или снимает выделение с костей."""
         scr_dices = self.scr_dices[:]
         # Пустой массив dices означает, что нужно снять выделение.
         # Непустой - выделение создать.
@@ -432,11 +458,11 @@ class Screen:
 
     def animbase_savezone(self, zone):
         """Возвращает масив данных по каждому симолу в заданной зоне.
+
         0 - 'y' символа, 1 - 'x' символа,
         2 - код символа, 3 - его аттрибут.
 
         """
-
         char_zone = []
         for y in range(zone[4]):
             for x in range(zone[5]):
@@ -457,7 +483,7 @@ class Screen:
             self.display_dices(rand_dices)
             time.sleep(0.1)
 
-    def anim_playerhl(self, game_mode):  # ПОФИКСИТЬ
+    def anim_playerhl(self, game_mode):
         """Плавно перемещает выделение с предыдущего на текущего игрока."""
         stdscr = self.stdscr
         ZONE_SCORE = Screen.ZONE_SCORE
@@ -466,29 +492,65 @@ class Screen:
         # Если текущий игрок - человек, то выделение перемещается справо
         # налево (с робота на человека). В обратном случае, наоборот.
         if game_mode.player.__type__ == "Human":
-            p_hum, p_rob = game_mode.player, game_mode.second_player
-            for i in range(10):
+            name_h = game_mode.player.name
+            name_r = game_mode.second_player.name
+            for i in range(9 + len(name_r)):
                 # Установка x_forward для выделения,  x_backward для его снятия
                 x_f = ZONE_SCORE[1] + 14 - i
-                x_b = ZONE_SCORE[1] + 14 + len(p_rob.name) - i
+                x_b = ZONE_SCORE[1] + 14 + len(name_r) - i
 
-                stdscr.chgat(y, x_f, 1, curses.color_pair(5))
+                # Ограничение, чтобы выделение не заходило за имя человека
+                if x_f >= ZONE_SCORE[1] + 5:
+                    stdscr.chgat(y, x_f, 1, curses.color_pair(5))
                 # Ограничение, чтобы выделения не снималось с имени человека
-                if x_b >= ZONE_SCORE[1] + 5 + len(p_hum.name):
+                if x_b >= ZONE_SCORE[1] + 5 + len(name_h):
                     stdscr.chgat(y, x_b, 1, curses.color_pair(0))
 
                 stdscr.refresh()
-                time.sleep(0.05)
+                time.sleep(0.03)
         else:
-            p_hum, p_rob = game_mode.second_player, game_mode.player
-            for i in range(9):
-                x_f = ZONE_SCORE[1] + 5 + len(p_hum.name) + i
+            name_h = game_mode.second_player.name
+            name_r = game_mode.player.name
+            for i in range(9 + len(name_r)):
+                x_f = ZONE_SCORE[1] + 5 + len(name_h) + i
                 x_b = ZONE_SCORE[1] + 5 + i
 
-                # Ограничение, чтобы выделение не залезало за имя робота
-                if x_f < ZONE_SCORE[1] + 14 + len(p_rob.name):
+                if x_f < ZONE_SCORE[1] + 14 + len(name_r):
                     stdscr.chgat(y, x_f, 1, curses.color_pair(5))
-                stdscr.chgat(y, x_b, 1, curses.color_pair(0))
+                if x_b < ZONE_SCORE[1] + 14:
+                    stdscr.chgat(y, x_b, 1, curses.color_pair(0))
 
                 stdscr.refresh()
-                time.sleep(0.05)
+                time.sleep(0.03)
+
+    def anim_percharword(self, word, ch_print_delay, can_skip):
+        """Посимвольно печатает слово. Возвращает 0 в случае успеха."""
+        stdscr = self.stdscr
+
+        curses.flushinp()
+        stdscr.timeout(0)
+
+        for alpha in word + " ":
+            stdscr.addch(alpha)
+            stdscr.refresh()
+
+            if stdscr.getch() != -1 and can_skip:
+                stdscr.timeout(-1)
+                return -1
+            time.sleep(ch_print_delay)
+
+        stdscr.timeout(-1)
+        return 0
+
+    def anim_arrowflick(self, y, x):
+        """Создает мигающую стрелку и убирет её по нажатию."""
+        stdscr = self.stdscr
+        curr_cp, next_cp = 0, 6
+        interrupt = False
+
+        while interrupt is False:
+            stdscr.addstr(y, x, "▼", curses.color_pair(curr_cp))
+            interrupt = self.input_delayinterrupt(0.5)
+            curr_cp, next_cp = next_cp, curr_cp
+
+        stdscr.addstr(y, x, " ")
