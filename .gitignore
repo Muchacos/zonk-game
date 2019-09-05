@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Support files
+_run.bat
+
 # C extensions
 *.so
 

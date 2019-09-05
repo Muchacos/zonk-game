@@ -26,22 +26,23 @@ class Game:
 
     Поля класса:
     game_flag -- булевая переменная, указывающаяя может ли продолжаться игра
+    screen -- экземпляр класса Screen, представляющий экран игры
     dices -- список, содержащий от 1 до 6 игральных костей (их целочисленные
              значения)
 
     Поля экземпляров:
-    player -- основной игрок (экземпляр класса Player)
+    player -- текущий игрок (экземпляр класса Player)
+    second_player -- второй игрок
     high_bar -- цел. значение очков необходимых для победы
-    screen -- экземпляр класса Screen, представляющий экран игры
 
     Методы:
+    action -- основной функционал действия
+    add_dices -- добавляет недостающие кости
     check_win -- проверяет, выйграл ли игрок
     check_combos -- проверяет, есть ли хоть одно комбо среди костей
     (check_combosrow,
     check_combosrange,
     check_combossingle) -- проверка комбинаций среди костей
-    add_dices -- добавляет недостающие кости
-    action -- основной функционал действия
 
     """
 
@@ -52,45 +53,60 @@ class Game:
     def __init__(self, screen):
         """Инициализация со вступлением."""
         Game.screen = screen
-        screen.display_msg("01_hello", 2)
-        screen.display_msg("02_name")
+        # Приветствие
+        screen.display_msg("01_hello")
+
+        # Получение имени игрока
         while True:
+            screen.display_msg("02_0_getname", wait=False)
             name = screen.input_str()
             if len(name) == 0:
-                screen.display_msg("22_dontans", 2)
+                screen.display_msg("02_2_stdname")
                 name = "Человек"
                 break
             elif len(name) <= 6 and len(name) >= 3:
                 break
             else:
-                screen.display_msg("25_badname")
+                screen.display_msg("02_1_badname",
+                                   delay=data.TIMINGS["DELAY-ERR"])
         self.player = Human(self, screen, name)
+
+        # Приветствие робота
         self.second_player = Robot(self, screen, "zX01")
-        screen.display_msg("13_enemy", 2, self.second_player.name)
-        screen.add_players(self)
-        screen.display_msg("04_00_maxp", 0, self.player.name)
+        screen.display_msg("03_robhello", name, self.second_player.name)
+        screen.add_players(self)  # Вывод имен игроков
+
+        # Установка очков для победы
+        screen.display_msg("04_0_gethbar", wait=False)
         while True:
             hbar = screen.input_str()
-            if hbar.isdigit() and int(hbar) >= 400 and int(hbar) < 30000:
+            if not hbar.isdigit():
+                screen.display_msg("04_2_errint",
+                                   delay=data.TIMINGS["DELAY-ERR"])
+            elif int(hbar) < 400 or int(hbar) > 20000:
+                screen.display_msg("04_3_badval")
+            else:
                 self.high_bar = int(hbar)
                 break
-            else:
-                screen.display_msg("19_badans", 1)
-                screen.display_msg("04_00_maxp", 0, self.player.name)
-        screen.add_high_bar(hbar)
-        screen.display_msg("05_start", 2)
+            screen.display_msg("04_1_getaehbar", wait=False)
+        screen.add_high_bar(hbar)  # Вывод очков для победы
+
+        # Начало игры
+        screen.display_msg("05_gamestart")
 
     def switch_player(self):
         """Меняет игроков местами."""
         self.player, self.second_player = self.second_player, self.player
         Game.screen.anim_playerhl(self)
-        Game.screen.display_msg("06_whoturn", 1.5, self.player.name)
+        Game.screen.display_msg("06_whoturn", self.player.name,
+                                delay=data.TIMINGS["DELAY-FST"])
 
     def check_win(self):
         """Опускает game_flag в случае выйгрыша текущего игрока."""
         if self.player.score_total >= self.high_bar:
             Game.game_flag = False
-            Game.screen.display_msg("16_won", 3, self.player.name)
+            Game.screen.display_msg("14_won", self.player.name)
+            Game.screen.display_msg("15_gameend")
 
     def check_combosrow(self, dices):
         """Возвращает True, если среди костей есть >= три одинаковых кости."""
@@ -155,7 +171,7 @@ class Game:
         # Проверка, есть ли хоть какие-то кости, приносящие очки.
         # Если нет, ход заканчивается автоматически, и игрок теряет очки.
         if self.check_combos() is False:
-            screen.display_msg("10_nodice", 2.5)
+            screen.display_msg("07_nocombos")
             player.clear_scoreturn()
             return -1
 
@@ -163,8 +179,6 @@ class Game:
         while True:
             pick_score = 0
             # ИИ/Человек берет в "руку" какие-то выпавшие кости
-            if player.__type__ == "Human":
-                screen.display_msg("20_dicechoose")
             hand = player.get_dicechoose()
             screen.effect_hldices(hand)  # выделение выбранных костей
             # Происходят проверки на комбинации в руке, приносящие очки (поря-
@@ -218,14 +232,14 @@ class Game:
             if pick_score == 0:
                 # Выделение "плохих" костей
                 screen.effect_hldices(hand, cp_id=4)
-                screen.display_msg("26_badalldice", 2)
+                screen.display_msg("10_1_badallpick", player.name)
                 screen.effect_hldices()
                 continue
             # Выводится сообщение, если в руке остались кости, которые не при-
             # несли очки (но они используются далее в игре).
             elif len(hand) > 0:
                 screen.effect_hldices(hand, cp_id=4)
-                screen.display_msg("11_baddice", 2)
+                screen.display_msg("10_0_badpick")
 
             # Добавление очков за выбранные кости
             player.add_scorepick(pick_score)
@@ -235,7 +249,7 @@ class Game:
             screen.effect_hldices()
 
             # При отмене выбора, цикл продолжается
-            if action_choice == data.KEYCODES["t_cancel"]:
+            if action_choice == data.KEYCODES["TURN_CANCEL"]:
                 Game.dices = temp_dices[:]  # возвращение удаленных костей
                 player.clear_scorepick()
             # Если игрок согласен использовать выбранные кости,
@@ -248,19 +262,19 @@ class Game:
         # После цикла очки за кости добавляются к очкам за ход.
         # На экран выводится информация о набранных очках.
         player.add_scoreturn()
-        screen.display_msg("09_scoreearn", 2, player.name, pick_score)
+        screen.display_msg("09_2_scrpick", player.name, pick_score)
 
         # Если игрок хочет закончить ход и сохнанить набранные очки:
-        if action_choice == data.KEYCODES["t_end"]:
+        if action_choice == data.KEYCODES["TURN_END"]:
             # Убираем оставшиеся кости. Новый игрок - чистый стол
             screen.effect_hldices(screen.scr_dices, cp_id=6)
             player.add_scoretotal()
-            screen.display_msg("08_scoretot", 2, player.name,
+            screen.display_msg("09_1_scrtotl", player.name,
                                player.score_total)
             self.check_win()
             return -2
 
-        elif action_choice == data.KEYCODES["t_continue"]:
+        elif action_choice == data.KEYCODES["TURN_CONTINUE"]:
             # Если ход продолжается, происходи проверка, остались ли еще кости
             if len(Game.dices) == 0:
                 return 2
@@ -365,27 +379,28 @@ class Human(Player):
         dices = Player.gm.dices
         screen = Player.screen
         while True:
+            screen.display_msg("08_0_getpick", wait=False)
             inp = screen.input_str()
             # Проверка, есть ли все выбранные кости среди выпавших костей
             if (inp.isdigit()
                     and all(inp.count(d) <= dices.count(int(d)) for d in inp)):
                 return [int(d) for d in inp]
             else:
-                screen.display_msg("12_badpick", 1)
-                screen.display_msg("20_dicechoose")
+                screen.display_msg("08_1_errpick",
+                                   delay=data.TIMINGS["DELAY-ERR"])
 
     def get_nextaction(self):
         """Узнает, готов ли игрок рискнуть продолжить ход."""
         screen = Player.screen
-        screen.display_msg("18_actchoose", speedup=2)
         while True:
+            screen.display_msg("13_0_actchoose", wait=False, speedup=2)
             inp = screen.input_str()
 
             if inp in data.KEYCODES.values():
                 return inp
             else:
-                screen.display_msg("19_badans", 1)
-                screen.display_msg("18_actchoose")
+                screen.display_msg("13_1_badans",
+                                   delay=data.TIMINGS["DELAY-ERR"])
 
 
 #  8888888b.    .d88888b.   888888b.     .d88888b.  88888888888
@@ -401,7 +416,7 @@ class Robot(Player):
     """Представляет ИИ.
 
     Методы:
-    take_*dicecombo* -- взятие роботом определенной комбинации костей
+    take_*combo* -- взятие роботом определенной комбинации костей
     get_dicechoose -- интеллектуальный выбор роботом выпавших костей
     get_nextaction -- интеллектуальный выбор роботом прололжать ход или нет
 
@@ -483,7 +498,7 @@ class Robot(Player):
                 self.take_single(dices, claw, 1)
 
         delay = (random.uniform(0.7, 1.5) + len(dices) / 10) * -1
-        Player.screen.display_msg("21_robthink", delay)
+        Player.screen.display_msg("11_robthink", delay=delay)
         return claw
 
     def get_nextaction(self):
@@ -519,8 +534,8 @@ class Robot(Player):
 
         choice = tools.randchance(chance_to_continue)
         if choice is True:
-            Player.screen.display_msg("15_00_robturnT", 2.5)
-            return data.KEYCODES["t_continue"]
+            Player.screen.display_msg("12_0_robturnT")
+            return data.KEYCODES["TURN_CONTINUE"]
         else:
-            Player.screen.display_msg("15_01_robrurnF", 2.5)
-            return data.KEYCODES["t_end"]
+            Player.screen.display_msg("12_1_robturnF")
+            return data.KEYCODES["TURN_END"]
