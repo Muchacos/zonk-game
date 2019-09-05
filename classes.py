@@ -107,8 +107,8 @@ class Game:
     def check_combos(self):
         """Возвращает True, если среди костей есть хотя бы одна комбинация."""
         d = Game.dices
-        return any((self.check_combosrow(d), self.check_combosrange(d),
-                    self.check_combossingle(d)))
+        return any([self.check_combosrow(d), self.check_combosrange(d),
+                    self.check_combossingle(d)])
 
     def add_dices(self):
         """Добавляет недостающие кости (до 6 штук)."""
@@ -166,7 +166,7 @@ class Game:
             if player.__type__ == "Human":
                 screen.display_msg("20_dicechoose")
             hand = player.get_dicechoose()
-            screen.highlightion_dices(hand)  # выделение выбранных костей
+            screen.effect_hldices(hand)  # выделение выбранных костей
             # Происходят проверки на комбинации в руке, приносящие очки (поря-
             # док имеет значение!). Кости, приносящие очки, удаляются из руки
             # и из основного списка костей класса Game (но возвращаются из
@@ -217,14 +217,14 @@ class Game:
             # Цикл тут же начинается сначала.
             if pick_score == 0:
                 # Выделение "плохих" костей
-                screen.highlightion_dices(hand, cp_id=4)
+                screen.effect_hldices(hand, cp_id=4)
                 screen.display_msg("26_badalldice", 2)
-                screen.highlightion_dices()
+                screen.effect_hldices()
                 continue
             # Выводится сообщение, если в руке остались кости, которые не при-
             # несли очки (но они используются далее в игре).
             elif len(hand) > 0:
-                screen.highlightion_dices(hand, cp_id=4)
+                screen.effect_hldices(hand, cp_id=4)
                 screen.display_msg("11_baddice", 2)
 
             # Добавление очков за выбранные кости
@@ -232,7 +232,7 @@ class Game:
             # Игрок решает как посутпить дальше
             action_choice = player.get_nextaction()
             # Снимается выделение с выбранных костей
-            screen.highlightion_dices()
+            screen.effect_hldices()
 
             # При отмене выбора, цикл продолжается
             if action_choice == data.KEYCODES["t_cancel"]:
@@ -242,7 +242,7 @@ class Game:
             # то они скрываются.
             else:
                 removed_dices = tools.exclude_array(temp_dices, Game.dices)
-                screen.highlightion_dices(removed_dices, cp_id=6)
+                screen.effect_hldices(removed_dices, cp_id=6)
                 break
 
         # После цикла очки за кости добавляются к очкам за ход.
@@ -253,7 +253,7 @@ class Game:
         # Если игрок хочет закончить ход и сохнанить набранные очки:
         if action_choice == data.KEYCODES["t_end"]:
             # Убираем оставшиеся кости. Новый игрок - чистый стол
-            screen.highlightion_dices(screen.scr_dices, cp_id=6)
+            screen.effect_hldices(screen.scr_dices, cp_id=6)
             player.add_scoretotal()
             screen.display_msg("08_scoretot", 2, player.name,
                                player.score_total)
@@ -377,7 +377,7 @@ class Human(Player):
     def get_nextaction(self):
         """Узнает, готов ли игрок рискнуть продолжить ход."""
         screen = Player.screen
-        screen.display_msg("18_actchoose")
+        screen.display_msg("18_actchoose", speedup=2)
         while True:
             inp = screen.input_str()
 
