@@ -72,7 +72,7 @@ class Game:
         self.player = Human(self, screen, name)
 
         # Приветствие робота
-        self.second_player = Robot(self, screen, "zX01")
+        self.second_player = AI_hard(self, screen, "zX01")
         screen.display_msg("03_robhello", name, self.second_player.name)
         screen.add_players(self)  # Вывод имен игроков
 
@@ -412,20 +412,22 @@ class Human(Player):
 #  888  T88b   Y88b. .d88P  888   d88P  Y88b. .d88P     888
 #  888   T88b   "Y88888P"   8888888P"    "Y88888P"      888
 
-class Robot(Player):
-    """Представляет ИИ.
+class AI_meta(Player):
+    """Представляет базовый класс ИИ.
 
-    Методы:
     take_*combo* -- взятие роботом определенной комбинации костей
-    get_dicechoose -- интеллектуальный выбор роботом выпавших костей
-    get_nextaction -- интеллектуальный выбор роботом прололжать ход или нет
 
     """
 
     __type__ = "Robot"
 
-    def take_range(self, dices, claw):
+    def __init__(self):
+        Player._init_()
+        self.claw = []
+
+    def take_range(self, dices):
         """Забирает в claw наибольший диапазон костей."""
+        claw = self.claw
         if 6 in dices:
             claw.extend(range(1, 7))
             dices.clear()
@@ -434,16 +436,17 @@ class Robot(Player):
                 claw.append(d)
                 dices.remove(d)
 
-    def take_row(self, dices, claw):
+    def take_row(self, dices):
         """Забирает в claw ряд(ы) костей."""
-        gm = Player.gm
-        for d in gm.dices:
-            if gm.dices.count(d) >= 3:
+        claw = self.claw
+        for d in dices:
+            if dices.count(d) >= 3:
                 claw.append(d)
                 dices.remove(d)
 
-    def take_single(self, dices, claw, amount=4):
+    def take_single(self, dices, amount=4):
         """Забирает в claw единичные кости, где amount - количество."""
+        claw = self.claw
         # По умолчанию amount = 4, т.к. это максимальное число единичных косей
         for i in (1, 5):  # Сначала забираются кости со значением "1"
             for d in dices[:]:
@@ -454,52 +457,129 @@ class Robot(Player):
                     dices.remove(d)
                     amount -= 1
 
+    def rowcombo_dice(self, dices):
+        """Возвращает значения костей, образующих комбо row"""
+        out = []
+        for d in dices:
+            if dices.count(d) >= 3 and d not in out:
+                out.append(d)
+        return out
+
+
+class AI_easy(AI_meta):
+    """Представляет глупый ИИ."""
+
+    def get_dicechoose(self):
+        gm = Player.gm
+        dices = gm.dices[:]
+        self.claw = []
+        ones, fives = dices.count(1), dices.count(5)
+
+        if gm.check_combosrange(dices):
+            if tools.randchance(37):
+                self.take_range(dices)
+                if ones + fives > 2 and tools.randchance(40):
+                    self.take_single(dices)
+            elif ones + fives > 2 and tools.randchance(65):
+                self.take_single(dices)
+            else:
+                self.take_single(random.choice([1, 2]))
+
+        elif gm.check_combosrow(dices):
+            if len(self.rowcombo_dice(dices)) > 1 and tools.randchance(90):
+                self.take_row(dices)
+            else:
+                row_dice = self.rowcombo_dice(dices)[0]
+                if ((row_dice == 1 and fives != 0 and tools.randchance(36))
+                   or (row_dice == 5 and ones != 0 and tools.randchance(40))):
+                    self.take_single()
+                elif row_dice not in (1, 5):
+                    if ones + fives > 0 and tools.randchance(40):
+                        self.take_single()
+                        self.take_row()
+                    else:
+                        self.take_row()
+                else:
+                    self.take_row()
+
+        if gm.check_combossingle(dices) and len(self.claw) != 0:
+            if len(dices) == ones + fives:
+                if tools.randchance(84):
+                    self.take_single(dices)
+                else:
+                    self.take_single(dices,
+                                     random.choice(range(1, len(dices))))
+            elif ones + fives > 2 and tools.randchance(50):
+                self.take_single(dices, 2)
+            elif tools.randchance(50):
+                self.take_single(dices, 1)
+
+        if len(self.claw) == 0:
+            if len(dices) == ones + fives:
+                if len(dices) == 1 or tools.randchance(84):
+                    self.take_single(dices)
+                else:
+                    self.take_single(dices,
+                                     random.choice(range(1, len(dices))))
+            elif ones + fives == 4 and tools.randchance(20):
+                self.take_single(dices, 3)
+            elif ones + fives > 2 and tools.randchance(39):
+                self.take_single(dices, 2)
+            else:
+                self.take_single(dices, 1)
+
+        return self.claw
+
+
+class AI_hard(AI_meta):
+    """Представляет сложиый ИИ."""
+
     def get_dicechoose(self):
         """Возвращает выбранные ИИ кости."""
         gm = Player.gm
         dices = gm.dices[:]
-        claw = []
-        singles = dices.count(1) + dices.count(5)  # кол-во единичных костей
+        self.claw = []
+        singles = dices.count(1) + dices.count(5)
 
         # Если есть диапазон костей, то забираем его
         if gm.check_combosrange(dices):
-            self.take_range(dices, claw)
+            self.take_range(dices)
             # Если остались еще кости, то забираем их
             if gm.check_combossingle(dices):
-                self.take_single(dices, claw)
+                self.take_single(dices)
 
         # Если есть ряд костей, то забрать весь (все) ряд(ы)
         elif gm.check_combosrow(dices):
-            self.take_row(dices, claw)
+            self.take_row(dices)
             # Если еще остались единичные кости
             if gm.check_combossingle(dices):
                 # Забирам их при условии, что всего косей меньше трех
                 # (+ шанс 60%) или с шансом 25%.
                 if (len(dices) < 3 and tools.randchance(60)
                         or tools.randchance(25)):
-                    self.take_single(dices, claw)
+                    self.take_single(dices)
 
         # Забирам все единичные кости, если остались только они
         elif singles == len(dices):
-            self.take_single(dices, claw)
+            self.take_single(dices)
 
         # Если костей больше трех, то забираем одну с шансом 75% или все
         elif len(dices) > 3:
             if tools.randchance(75) or singles == 1:
-                self.take_single(dices, claw, 1)
+                self.take_single(dices, 1)
             else:
-                self.take_single(dices, claw)
+                self.take_single(dices)
 
         # Если кости три или меньше, то забираем все с шансом 75% или одну
         elif len(dices) <= 3:
             if singles > 1 and tools.randchance(75):
-                self.take_single(dices, claw)
+                self.take_single(dices)
             else:
-                self.take_single(dices, claw, 1)
+                self.take_single(dices, 1)
 
         delay = (random.uniform(0.7, 1.5) + len(dices) / 10) * -1
         Player.screen.display_msg("11_robthink", delay=delay)
-        return claw
+        return self.claw
 
     def get_nextaction(self):
         """Узнает, готов ли робот рискнуть продолжить ход."""
