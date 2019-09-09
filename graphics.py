@@ -141,11 +141,11 @@ class Screen:
 
     def __del__(self):
         """Завершение работы экрана и возврат стд. параметров терминала."""
+        curses.beep()
         curses.echo()
         curses.nocbreak()
         curses.curs_set(1)
         curses.endwin()
-        os.system("mode con: cols=80 lines=30")
 
     def init_pairs(self):
         """Установка цветовых пар (используемых цветов)."""
