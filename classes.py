@@ -421,13 +421,15 @@ class AI_meta(Player):
 
     __type__ = "Robot"
 
-    def __init__(self):
-        Player._init_()
+    def __init__(self, game_mode, screen, name):
+        Player.__init__(self, game_mode, screen, name)
         self.claw = []
+        self.dices_for_pick = []
 
-    def take_range(self, dices):
+    def take_range(self):
         """Забирает в claw наибольший диапазон костей."""
         claw = self.claw
+        dices = self.dices_for_pick
         if 6 in dices:
             claw.extend(range(1, 7))
             dices.clear()
@@ -436,17 +438,19 @@ class AI_meta(Player):
                 claw.append(d)
                 dices.remove(d)
 
-    def take_row(self, dices):
+    def take_row(self):
         """Забирает в claw ряд(ы) костей."""
         claw = self.claw
+        dices = self.dices_for_pick[:]
         for d in dices:
             if dices.count(d) >= 3:
                 claw.append(d)
-                dices.remove(d)
+                self.dices_for_pick.remove(d)
 
-    def take_single(self, dices, amount=4):
+    def take_single(self, amount=4):
         """Забирает в claw единичные кости, где amount - количество."""
         claw = self.claw
+        dices = self.dices_for_pick
         # По умолчанию amount = 4, т.к. это максимальное число единичных косей
         for i in (1, 5):  # Сначала забираются кости со значением "1"
             for d in dices[:]:
@@ -457,8 +461,9 @@ class AI_meta(Player):
                     dices.remove(d)
                     amount -= 1
 
-    def rowcombo_dice(self, dices):
-        """Возвращает значения костей, образующих комбо row"""
+    def rowcombo_dice(self):
+        """Возвращает значения костей, образующих комбо 'row'."""
+        dices = self.dices_for_pick
         out = []
         for d in dices:
             if dices.count(d) >= 3 and d not in out:
@@ -471,25 +476,26 @@ class AI_easy(AI_meta):
 
     def get_dicechoose(self):
         gm = Player.gm
-        dices = gm.dices[:]
+        self.dices_for_pick = gm.dices[:]
         self.claw = []
+        dices = self.dices_for_pick
         ones, fives = dices.count(1), dices.count(5)
 
         if gm.check_combosrange(dices):
             if tools.randchance(37):
-                self.take_range(dices)
+                self.take_range()
                 if ones + fives > 2 and tools.randchance(40):
-                    self.take_single(dices)
+                    self.take_single()
             elif ones + fives > 2 and tools.randchance(65):
-                self.take_single(dices)
+                self.take_single()
             else:
                 self.take_single(random.choice([1, 2]))
 
         elif gm.check_combosrow(dices):
-            if len(self.rowcombo_dice(dices)) > 1 and tools.randchance(90):
-                self.take_row(dices)
+            if len(self.rowcombo_dice()) > 1 and tools.randchance(90):
+                self.take_row()
             else:
-                row_dice = self.rowcombo_dice(dices)[0]
+                row_dice = self.rowcombo_dice()[0]
                 if ((row_dice == 1 and fives != 0 and tools.randchance(36))
                    or (row_dice == 5 and ones != 0 and tools.randchance(40))):
                     self.take_single()
@@ -505,30 +511,68 @@ class AI_easy(AI_meta):
         if gm.check_combossingle(dices) and len(self.claw) != 0:
             if len(dices) == ones + fives:
                 if tools.randchance(84):
-                    self.take_single(dices)
+                    self.take_single()
                 else:
-                    self.take_single(dices,
-                                     random.choice(range(1, len(dices))))
+                    self.take_single(random.choice(range(1, len(dices))))
             elif ones + fives > 2 and tools.randchance(50):
-                self.take_single(dices, 2)
+                self.take_single(2)
             elif tools.randchance(50):
-                self.take_single(dices, 1)
+                self.take_single(1)
 
         if len(self.claw) == 0:
             if len(dices) == ones + fives:
                 if len(dices) == 1 or tools.randchance(84):
-                    self.take_single(dices)
+                    self.take_single()
                 else:
-                    self.take_single(dices,
-                                     random.choice(range(1, len(dices))))
-            elif ones + fives == 4 and tools.randchance(20):
-                self.take_single(dices, 3)
-            elif ones + fives > 2 and tools.randchance(39):
-                self.take_single(dices, 2)
+                    self.take_single(random.choice(range(1, len(dices))))
+            elif ones + fives == 4 and tools.randchance(73):
+                self.take_single(3)
+            elif ones + fives > 2 and tools.randchance(52):
+                self.take_single(2)
+            elif tools.randchance(31):
+                self.take_single(1)
             else:
-                self.take_single(dices, 1)
+                self.take_single()
 
         return self.claw
+
+    def get_nextaction(self):
+        gm = Player.gm
+        dices = gm.dices
+        chance_to_continue = 0
+
+        if len(dices) == 0:
+            chance_to_continue = 93
+        elif len(dices) in (4, 5):
+            chance_to_continue = random.randint(70, 90)
+        elif len(dices) == 3:
+            chance_to_continue = random.randint(60, 70)
+        elif len(dices) == 2:
+            chance_to_continue = random.randint(20, 50)
+        else:
+            chance_to_continue = random.randint(10, 30)
+
+        scores = self.score_pick + self.score_turn + self.score_total
+        if scores >= gm.high_bar:
+            chance_to_continue = 91
+        elif scores >= gm.second_player.score_total:
+            chance_to_continue += random.randint(9, 24)
+
+        turn_score = self.score_pick + self.score_turn
+        if turn_score >= random.randint(700, 1000):
+            chance_to_continue -= random.randint(21, 39)
+        elif turn_score >= random.randint(300, 600):
+            chance_to_continue -= random.randint(15, 21)
+        else:
+            chance_to_continue += random.randint(10, 40)
+
+        choice = tools.randchance(chance_to_continue)
+        if choice is True:
+            Player.screen.display_msg("12_0_robturnT")
+            return data.KEYCODES["TURN_CONTINUE"]
+        else:
+            Player.screen.display_msg("12_1_robturnF")
+            return data.KEYCODES["TURN_END"]
 
 
 class AI_hard(AI_meta):
@@ -543,39 +587,39 @@ class AI_hard(AI_meta):
 
         # Если есть диапазон костей, то забираем его
         if gm.check_combosrange(dices):
-            self.take_range(dices)
+            self.take_range()
             # Если остались еще кости, то забираем их
             if gm.check_combossingle(dices):
-                self.take_single(dices)
+                self.take_single()
 
         # Если есть ряд костей, то забрать весь (все) ряд(ы)
         elif gm.check_combosrow(dices):
-            self.take_row(dices)
+            self.take_row()
             # Если еще остались единичные кости
             if gm.check_combossingle(dices):
                 # Забирам их при условии, что всего косей меньше трех
                 # (+ шанс 60%) или с шансом 25%.
                 if (len(dices) < 3 and tools.randchance(60)
                         or tools.randchance(25)):
-                    self.take_single(dices)
+                    self.take_single()
 
         # Забирам все единичные кости, если остались только они
         elif singles == len(dices):
-            self.take_single(dices)
+            self.take_single()
 
         # Если костей больше трех, то забираем одну с шансом 75% или все
         elif len(dices) > 3:
             if tools.randchance(75) or singles == 1:
-                self.take_single(dices, 1)
+                self.take_single(1)
             else:
-                self.take_single(dices)
+                self.take_single()
 
         # Если кости три или меньше, то забираем все с шансом 75% или одну
         elif len(dices) <= 3:
             if singles > 1 and tools.randchance(75):
-                self.take_single(dices)
+                self.take_single()
             else:
-                self.take_single(dices, 1)
+                self.take_single(1)
 
         delay = (random.uniform(0.7, 1.5) + len(dices) / 10) * -1
         Player.screen.display_msg("11_robthink", delay=delay)
