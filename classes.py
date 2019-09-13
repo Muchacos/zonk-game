@@ -108,24 +108,6 @@ class Game:
             Game.screen.display_msg("14_won", self.player.name)
             Game.screen.display_msg("15_gameend")
 
-    def check_combosrow(self, dices):
-        """Возвращает True, если среди костей есть >= три одинаковых кости."""
-        return any(dices.count(d) >= 3 for d in dices)
-
-    def check_combosrange(self, dices):
-        """Возвращает True, если среди костей есть все кости от 1 до 5."""
-        return all(d in dices for d in range(1, 6))
-
-    def check_combossingle(self, dices):
-        """Возвращает True, если среди костей есть кость 1 или 5."""
-        return any(d in dices for d in (1, 5))
-
-    def check_combos(self):
-        """Возвращает True, если среди костей есть хотя бы одна комбинация."""
-        d = Game.dices
-        return any([self.check_combosrow(d), self.check_combosrange(d),
-                    self.check_combossingle(d)])
-
     def add_dices(self):
         """Добавляет недостающие кости (до 6 штук)."""
         Game.dices.extend([1] * (6 - len(Game.dices)))
@@ -170,7 +152,7 @@ class Game:
 
         # Проверка, есть ли хоть какие-то кости, приносящие очки.
         # Если нет, ход заканчивается автоматически, и игрок теряет очки.
-        if self.check_combos() is False:
+        if tools.check_combos_any(Game.dices) is False:
             screen.display_msg("07_nocombos")
             player.clear_scoreturn()
             return -1
@@ -186,7 +168,7 @@ class Game:
             # и из основного списка костей класса Game (но возвращаются из
             # temp_dices, в случае повторного выбора).
 
-            if self.check_combosrange(hand):
+            if tools.check_combos_range(hand):
                 if 6 in hand:
                     pick_score += 1500
                     hand.clear()
@@ -197,7 +179,7 @@ class Game:
                         hand.remove(i)
                         Game.dices.remove(i)
 
-            if self.check_combosrow(hand):
+            if tools.check_combos_row(hand):
                 for dice in hand[:]:
                     score = 0
                     row_len = hand.count(dice)
@@ -214,7 +196,7 @@ class Game:
                             hand.remove(dice)
                             Game.dices.remove(dice)
 
-            if self.check_combossingle(hand):
+            if tools.check_combos_single(hand):
                 for dice in hand[:]:
 
                     if dice == 1:
@@ -481,26 +463,26 @@ class AI_easy(AI_meta):
         dices = self.dices_for_pick
         ones, fives = dices.count(1), dices.count(5)
 
-        if gm.check_combosrange(dices):
-            if tools.randchance(37):
+        if tools.check_combos_range(dices):
+            if tools.chance(37):
                 self.take_range()
-                if ones + fives > 2 and tools.randchance(40):
+                if ones + fives > 2 and tools.chance(40):
                     self.take_single()
-            elif ones + fives > 2 and tools.randchance(65):
+            elif ones + fives > 2 and tools.chance(65):
                 self.take_single()
             else:
                 self.take_single(random.choice([1, 2]))
 
-        elif gm.check_combosrow(dices):
-            if len(self.rowcombo_dice()) > 1 and tools.randchance(90):
+        elif tools.check_combos_row(dices):
+            if len(self.rowcombo_dice()) > 1 and tools.chance(90):
                 self.take_row()
             else:
                 row_dice = self.rowcombo_dice()[0]
-                if ((row_dice == 1 and fives != 0 and tools.randchance(36))
-                   or (row_dice == 5 and ones != 0 and tools.randchance(40))):
+                if ((row_dice == 1 and fives != 0 and tools.chance(36))
+                   or (row_dice == 5 and ones != 0 and tools.chance(40))):
                     self.take_single()
                 elif row_dice not in (1, 5):
-                    if ones + fives > 0 and tools.randchance(40):
+                    if ones + fives > 0 and tools.chance(40):
                         self.take_single()
                         self.take_row()
                     else:
@@ -508,28 +490,28 @@ class AI_easy(AI_meta):
                 else:
                     self.take_row()
 
-        if gm.check_combossingle(dices) and len(self.claw) != 0:
+        if tools.check_combos_single(dices) and len(self.claw) != 0:
             if len(dices) == ones + fives:
-                if tools.randchance(84):
+                if tools.chance(84):
                     self.take_single()
                 else:
                     self.take_single(random.choice(range(1, len(dices))))
-            elif ones + fives > 2 and tools.randchance(50):
+            elif ones + fives > 2 and tools.chance(50):
                 self.take_single(2)
-            elif tools.randchance(50):
+            elif tools.chance(50):
                 self.take_single(1)
 
         if len(self.claw) == 0:
             if len(dices) == ones + fives:
-                if len(dices) == 1 or tools.randchance(84):
+                if len(dices) == 1 or tools.chance(84):
                     self.take_single()
                 else:
                     self.take_single(random.choice(range(1, len(dices))))
-            elif ones + fives == 4 and tools.randchance(73):
+            elif ones + fives == 4 and tools.chance(73):
                 self.take_single(3)
-            elif ones + fives > 2 and tools.randchance(52):
+            elif ones + fives > 2 and tools.chance(52):
                 self.take_single(2)
-            elif tools.randchance(31):
+            elif tools.chance(31):
                 self.take_single(1)
             else:
                 self.take_single()
@@ -566,7 +548,7 @@ class AI_easy(AI_meta):
         else:
             chance_to_continue += random.randint(10, 40)
 
-        choice = tools.randchance(chance_to_continue)
+        choice = tools.chance(chance_to_continue)
         if choice is True:
             Player.screen.display_msg("12_0_robturnT")
             return data.KEYCODES["TURN_CONTINUE"]
@@ -586,21 +568,21 @@ class AI_hard(AI_meta):
         singles = dices.count(1) + dices.count(5)
 
         # Если есть диапазон костей, то забираем его
-        if gm.check_combosrange(dices):
+        if tools.check_combos_range(dices):
             self.take_range()
             # Если остались еще кости, то забираем их
-            if gm.check_combossingle(dices):
+            if tools.check_combos_single(dices):
                 self.take_single()
 
         # Если есть ряд костей, то забрать весь (все) ряд(ы)
-        elif gm.check_combosrow(dices):
+        elif tools.check_combos_row(dices):
             self.take_row()
             # Если еще остались единичные кости
-            if gm.check_combossingle(dices):
+            if tools.check_combos_single(dices):
                 # Забирам их при условии, что всего косей меньше трех
                 # (+ шанс 60%) или с шансом 25%.
-                if (len(dices) < 3 and tools.randchance(60)
-                        or tools.randchance(25)):
+                if (len(dices) < 3 and tools.chance(60)
+                        or tools.chance(25)):
                     self.take_single()
 
         # Забирам все единичные кости, если остались только они
@@ -609,14 +591,14 @@ class AI_hard(AI_meta):
 
         # Если костей больше трех, то забираем одну с шансом 75% или все
         elif len(dices) > 3:
-            if tools.randchance(75) or singles == 1:
+            if tools.chance(75) or singles == 1:
                 self.take_single(1)
             else:
                 self.take_single()
 
         # Если кости три или меньше, то забираем все с шансом 75% или одну
         elif len(dices) <= 3:
-            if singles > 1 and tools.randchance(75):
+            if singles > 1 and tools.chance(75):
                 self.take_single()
             else:
                 self.take_single(1)
@@ -656,7 +638,7 @@ class AI_hard(AI_meta):
         elif len(dices) < 3:
             chance_to_continue -= 30
 
-        choice = tools.randchance(chance_to_continue)
+        choice = tools.chance(chance_to_continue)
         if choice is True:
             Player.screen.display_msg("12_0_robturnT")
             return data.KEYCODES["TURN_CONTINUE"]
