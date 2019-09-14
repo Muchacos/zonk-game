@@ -62,8 +62,10 @@ def cheat_good_dices(amount_of_dices, *, clear=None):
                 return result
 
 
-def cheat_bad_dices(amount_of_dices):
+def cheat_bad_dices(amount_of_dices, loose=True):
     while True:
         result = [r.choice([2, 3, 4, 6]) for i in range(amount_of_dices)]
         if check_combos_any(result) is False:
+            if loose is False and len(result) != 1:
+                result[0] = 5
             return result

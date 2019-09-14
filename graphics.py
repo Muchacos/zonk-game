@@ -86,12 +86,8 @@ class Screen:
     }
 
     def __init__(self):
-        """Иниц. stdscr, установка параметров теримнала и прорисовка UI."""
+        """Иниц. stdscr, установка параметров окна теримнала."""
         SH, SW = Screen.SH, Screen.SW
-        ZONE_DICES = Screen.ZONE_DICES
-        ZONE_INPUT = Screen.ZONE_INPUT
-        ZONE_MSG = Screen.ZONE_MSG
-        ZONE_SCORE = Screen.ZONE_SCORE
         self.scr_dices = [0] * 6  # индекс - позиция, значение - значение :)
         self.stdscr = curses.initscr()
         stdscr = self.stdscr
@@ -106,12 +102,27 @@ class Screen:
         stdscr.keypad(True)
         curses.curs_set(0)
 
-        # Включение ярко-белого цвета для отрисовки
-        stdscr.attron(curses.color_pair(1))
+    def __del__(self):
+        """Завершение работы экрана и возврат стд. параметров терминала."""
+        curses.beep()
+        curses.echo()
+        curses.nocbreak()
+        curses.curs_set(1)
+        curses.endwin()
+
+    def init_zones(self):
+        stdscr = self.stdscr
+        SH, SW = Screen.SH, Screen.SW
+        ZONE_DICES = Screen.ZONE_DICES
+        ZONE_INPUT = Screen.ZONE_INPUT
+        ZONE_SCORE = Screen.ZONE_SCORE
+        ZONE_MSG = Screen.ZONE_MSG
+
         # Заполнение точками игровое окно
         self.clear_zone((0, 0, SH - 2, SW - 2, SH, SW), "∙", 2)
 
-        # Отрисовка игровых зон
+        # Включение ярко-белого цвета отрисовки
+        stdscr.attron(curses.color_pair(1))
         for zone, txt in ([ZONE_DICES, "┤dices├"], [ZONE_SCORE, "┤score├"],
                           [ZONE_INPUT, "┤input├"], [ZONE_MSG, "┤msg├"]):
             uy, lx = zone[0] - 1, zone[1] - 1
@@ -136,16 +147,9 @@ class Screen:
 
         # Добавление стрелки на край окна для ввода
         stdscr.addstr(ZONE_INPUT[0], ZONE_INPUT[1] - 1, ">")
-
+        # Выключение цвета отрисовки
+        stdscr.attroff(curses.color_pair(1))
         stdscr.refresh()
-
-    def __del__(self):
-        """Завершение работы экрана и возврат стд. параметров терминала."""
-        curses.beep()
-        curses.echo()
-        curses.nocbreak()
-        curses.curs_set(1)
-        curses.endwin()
 
     def init_pairs(self):
         """Установка цветовых пар (используемых цветов)."""

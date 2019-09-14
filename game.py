@@ -3,6 +3,7 @@ import classes
 import graphics
 
 screen = graphics.Screen()
+screen.init_zones()
 gm = classes.Game(screen)  # game_mode
 
 # Основной цикл игры
