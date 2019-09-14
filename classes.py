@@ -49,6 +49,7 @@ class Game:
     game_flag = True
     screen = None
     dices = [1] * 6
+    temp_dices = []
 
     def __init__(self, screen):
         """Инициализация со вступлением."""
@@ -122,114 +123,101 @@ class Game:
 #        888  888  Y88b.     Y88b.   888  Y88..88P  888  888
 #        "Y888888   "Y8888P   "Y888  888   "Y88P"   888  888
 
-    def action(self):
-        """Совершение действия в ход. Возвращает исход действия в числе.
-
-        Отрицательные значения (-1, -2) означают, что ход должен передасться
-        другому игроку. Положительные - ход не передается.
-
-        Кости НЕ добавятся в сдедуюищй ход (возвращает False) если:
-        0 - игра уже закончена
-        1 - игрок совершил действие и продолжает ход (кости еще остались)
-
-        Кости добавляются (возвращает True) если:
-        2 - игрок совершил действие и продолжает ход, но кости закончились
-        -1 - игрок не может совешить действие т.к. выпавшие кости не приносят
-          очков. Ход заканчивается
-        -2 - игрок совершил действие и заканчивает ход
-        """
-        screen = Game.screen
-        player = self.player
-
-        # Установка рандомных значений для имеющихся костей и анимация броска
-        screen.anim_diceroll(len(Game.dices))
+    def roll_dices(self, *, display=True):
+        """Бросок костей. Иногда они выпадают случайно."""
+        screen = self.screen
+        dices = Game.dices
+        screen.anim_diceroll(len(dices))
         for i in range(len(Game.dices)):
-            Game.dices[i] = random.randint(1, 6)
-        temp_dices = Game.dices[:]  # сохрание костей (нужно далее)
+            dices[i] = random.randint(1, 6)
+        Game.temp_dices = dices[:]
 
-        # Выводим на экран выпавшие кости
-        screen.display_dices(Game.dices)
+        if display is True:
+            screen.display_dices(dices)
+        return tools.check_combos_any(dices)
 
-        # Проверка, есть ли хоть какие-то кости, приносящие очки.
-        # Если нет, ход заканчивается автоматически, и игрок теряет очки.
-        if tools.check_combos_any(Game.dices) is False:
-            screen.display_msg("07_nocombos")
-            player.clear_scoreturn()
-            return -1
+    def get_pick(self, *, raise_bad_pick=True, raise_bad_all_pick=True):
+        """Получает выбранне игроком кости и выводит очки за них."""
+        screen = self.screen
+        player = self.player
+        pick_score = 0
+        # ИИ/Человек берет в "руку" какие-то выпавшие кости
+        hand = player.get_dicechoose()
+        screen.effect_hldices(hand)  # выделение выбранных костей
+        # Происходят проверки на комбинации в руке, приносящие очки (поря-
+        # док имеет значение!). Кости, приносящие очки, удаляются из руки
+        # и из основного списка костей класса Game (но возвращаются из
+        # temp_dices, в случае повторного выбора).
 
-        # Цикл взятия косей игроком
-        while True:
-            pick_score = 0
-            # ИИ/Человек берет в "руку" какие-то выпавшие кости
-            hand = player.get_dicechoose()
-            screen.effect_hldices(hand)  # выделение выбранных костей
-            # Происходят проверки на комбинации в руке, приносящие очки (поря-
-            # док имеет значение!). Кости, приносящие очки, удаляются из руки
-            # и из основного списка костей класса Game (но возвращаются из
-            # temp_dices, в случае повторного выбора).
+        if tools.check_combos_range(hand):
+            if 6 in hand:
+                pick_score += 1500
+                hand.clear()
+                Game.dices.clear()
+            else:
+                pick_score += 750
+                for i in range(1, 6):
+                    hand.remove(i)
+                    Game.dices.remove(i)
 
-            if tools.check_combos_range(hand):
-                if 6 in hand:
-                    pick_score += 1500
-                    hand.clear()
-                    Game.dices.clear()
-                else:
-                    pick_score += 750
-                    for i in range(1, 6):
-                        hand.remove(i)
-                        Game.dices.remove(i)
+        if tools.check_combos_row(hand):
+            for dice in hand[:]:
+                score = 0
+                row_len = hand.count(dice)
 
-            if tools.check_combos_row(hand):
-                for dice in hand[:]:
-                    score = 0
-                    row_len = hand.count(dice)
-
-                    if row_len >= 3:
-                        if dice == 1:
-                            score += 1000
-                        else:
-                            score += dice * 100
-                        score *= (row_len - 2)
-                        pick_score += score
-
-                        for i in range(row_len):
-                            hand.remove(dice)
-                            Game.dices.remove(dice)
-
-            if tools.check_combos_single(hand):
-                for dice in hand[:]:
-
+                if row_len >= 3:
                     if dice == 1:
-                        pick_score += 100
+                        score += 1000
+                    else:
+                        score += dice * 100
+                    score *= (row_len - 2)
+                    pick_score += score
+
+                    for i in range(row_len):
                         hand.remove(dice)
                         Game.dices.remove(dice)
 
-                    elif dice == 5:
-                        pick_score += 50
-                        hand.remove(dice)
-                        Game.dices.remove(dice)
+        if tools.check_combos_single(hand):
+            for dice in hand[:]:
 
-            # Выводится сообщение, если никакие кости не принесли очков.
-            # Цикл тут же начинается сначала.
-            if pick_score == 0:
-                # Выделение "плохих" костей
+                if dice == 1:
+                    pick_score += 100
+                    hand.remove(dice)
+                    Game.dices.remove(dice)
+
+                elif dice == 5:
+                    pick_score += 50
+                    hand.remove(dice)
+                    Game.dices.remove(dice)
+
+        # Выводится сообщение, если никакие кости не принесли очков.
+        # Цикл тут же начинается сначала.
+        if pick_score == 0:
+            if raise_bad_all_pick:
                 screen.effect_hldices(hand, cp_id=4)
                 screen.display_msg("10_1_badallpick", player.name)
                 screen.effect_hldices()
-                continue
-            # Выводится сообщение, если в руке остались кости, которые не при-
-            # несли очки (но они используются далее в игре).
-            elif len(hand) > 0:
-                screen.effect_hldices(hand, cp_id=4)
-                screen.display_msg("10_0_badpick")
+            return pick_score
+        # Выводится сообщение, если в руке остались кости, которые не при-
+        # несли очки (но они используются далее в игре).
+        elif len(hand) > 0 and raise_bad_pick:
+            screen.effect_hldices(hand, cp_id=4)
+            screen.display_msg("10_0_badpick")
 
-            # Добавление очков за выбранные кости
-            player.add_scorepick(pick_score)
-            # Игрок решает как посутпить дальше
-            action_choice = player.get_nextaction()
-            # Снимается выделение с выбранных костей
-            screen.effect_hldices()
+        # Добавление очков за выбранные кости
+        player.add_scorepick(pick_score)
+        return pick_score
 
+    def get_action_choice(self, *, auto_managing=True):
+        """Возвращает то, что хочет сделать игрок далее."""
+        player = self.player
+        screen = self.screen
+        temp_dices = Game.temp_dices
+
+        action_choice = player.get_nextaction()
+        screen.effect_hldices()
+
+        if auto_managing:
             # При отмене выбора, цикл продолжается
             if action_choice == data.KEYCODES["TURN_CANCEL"]:
                 Game.dices = temp_dices[:]  # возвращение удаленных костей
@@ -239,29 +227,27 @@ class Game:
             else:
                 removed_dices = tools.exclude_array(temp_dices, Game.dices)
                 screen.effect_hldices(removed_dices, cp_id=6)
-                break
 
-        # После цикла очки за кости добавляются к очкам за ход.
-        # На экран выводится информация о набранных очках.
+        return action_choice
+
+    def add_scores(self, pick_score, action_choice, *, auto_msg=True):
+        """Занимается добавлением очков."""
+        player = self.player
+        screen = self.screen
+
         player.add_scoreturn()
-        screen.display_msg("09_2_scrpick", player.name, pick_score)
+        if auto_msg:
+            screen.display_msg("09_2_scrpick", player.name, pick_score)
 
         # Если игрок хочет закончить ход и сохнанить набранные очки:
         if action_choice == data.KEYCODES["TURN_END"]:
             # Убираем оставшиеся кости. Новый игрок - чистый стол
             screen.effect_hldices(screen.scr_dices, cp_id=6)
             player.add_scoretotal()
-            screen.display_msg("09_1_scrtotl", player.name,
-                               player.score_total)
+            if auto_msg:
+                screen.display_msg("09_1_scrtotl", player.name,
+                                   player.score_total)
             self.check_win()
-            return -2
-
-        elif action_choice == data.KEYCODES["TURN_CONTINUE"]:
-            # Если ход продолжается, происходи проверка, остались ли еще кости
-            if len(Game.dices) == 0:
-                return 2
-            else:
-                return 1
 
 
 #  8888888b.   888             d8888  Y88b   d88P  8888888888  8888888b.
