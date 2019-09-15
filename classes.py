@@ -46,54 +46,19 @@ class Game:
 
     """
 
-    game_flag = True
     screen = None
-    dices = [1] * 6
-    temp_dices = []
 
     def __init__(self, screen):
-        """Инициализация со вступлением."""
+        """Инициализация."""
         Game.screen = screen
-        # Приветствие
-        screen.display_msg("01_hello")
+        self.game_flag = True
+        self.dices = [1] * 6
+        self.temp_dices = []
 
-        # Получение имени игрока
-        while True:
-            screen.display_msg("02_0_getname", wait=False)
-            name = screen.input_str()
-            if len(name) == 0:
-                screen.display_msg("02_2_stdname")
-                name = "Человек"
-                break
-            elif len(name) <= 6 and len(name) >= 3:
-                break
-            else:
-                screen.display_msg("02_1_badname",
-                                   delay=data.TIMINGS["DELAY-ERR"])
-        self.player = Human(self, screen, name)
-
-        # Приветствие робота
-        self.second_player = AI_hard(self, screen, "zX01")
-        screen.display_msg("03_robhello", name, self.second_player.name)
-        screen.add_players(self)  # Вывод имен игроков
-
-        # Установка очков для победы
-        screen.display_msg("04_0_gethbar", wait=False)
-        while True:
-            hbar = screen.input_str()
-            if not hbar.isdigit():
-                screen.display_msg("04_2_errint",
-                                   delay=data.TIMINGS["DELAY-ERR"])
-            elif int(hbar) < 400 or int(hbar) > 20000:
-                screen.display_msg("04_3_badval")
-            else:
-                self.high_bar = int(hbar)
-                break
-            screen.display_msg("04_1_getaehbar", wait=False)
-        screen.add_high_bar(hbar)  # Вывод очков для победы
-
-        # Начало игры
-        screen.display_msg("05_gamestart")
+    def set_settings(self, high_bar, player, enemy):
+        self.player = player
+        self.high_bar = high_bar
+        self.second_player = enemy
 
     def switch_player(self):
         """Меняет игроков местами."""
@@ -105,13 +70,13 @@ class Game:
     def check_win(self):
         """Опускает game_flag в случае выйгрыша текущего игрока."""
         if self.player.score_total >= self.high_bar:
-            Game.game_flag = False
-            Game.screen.display_msg("14_won", self.player.name)
-            Game.screen.display_msg("15_gameend")
+            self.game_flag = False
+            return True
+        return False
 
     def add_dices(self):
         """Добавляет недостающие кости (до 6 штук)."""
-        Game.dices.extend([1] * (6 - len(Game.dices)))
+        self.dices.extend([1] * (6 - len(self.dices)))
 
 #
 #                            888     d8b
@@ -123,17 +88,21 @@ class Game:
 #        888  888  Y88b.     Y88b.   888  Y88..88P  888  888
 #        "Y888888   "Y8888P   "Y888  888   "Y88P"   888  888
 
-    def roll_dices(self, *, display=True):
+    def roll_dices(self, *, auto_managing=True):
         """Бросок костей. Иногда они выпадают случайно."""
         screen = self.screen
-        dices = Game.dices
+        dices = self.dices
         screen.anim_diceroll(len(dices))
-        for i in range(len(Game.dices)):
+        for i in range(len(self.dices)):
             dices[i] = random.randint(1, 6)
         Game.temp_dices = dices[:]
 
-        if display is True:
+        if auto_managing is True:
             screen.display_dices(dices)
+            if tools.check_combos_any(dices) is False:
+                screen.display_msg("07_nocombos")
+                self.player.clear_scoreturn()
+
         return tools.check_combos_any(dices)
 
     def get_pick(self, *, raise_bad_pick=True, raise_bad_all_pick=True):
@@ -153,12 +122,12 @@ class Game:
             if 6 in hand:
                 pick_score += 1500
                 hand.clear()
-                Game.dices.clear()
+                self.dices.clear()
             else:
                 pick_score += 750
                 for i in range(1, 6):
                     hand.remove(i)
-                    Game.dices.remove(i)
+                    self.dices.remove(i)
 
         if tools.check_combos_row(hand):
             for dice in hand[:]:
@@ -175,7 +144,7 @@ class Game:
 
                     for i in range(row_len):
                         hand.remove(dice)
-                        Game.dices.remove(dice)
+                        self.dices.remove(dice)
 
         if tools.check_combos_single(hand):
             for dice in hand[:]:
@@ -183,12 +152,12 @@ class Game:
                 if dice == 1:
                     pick_score += 100
                     hand.remove(dice)
-                    Game.dices.remove(dice)
+                    self.dices.remove(dice)
 
                 elif dice == 5:
                     pick_score += 50
                     hand.remove(dice)
-                    Game.dices.remove(dice)
+                    self.dices.remove(dice)
 
         # Выводится сообщение, если никакие кости не принесли очков.
         # Цикл тут же начинается сначала.
@@ -220,12 +189,12 @@ class Game:
         if auto_managing:
             # При отмене выбора, цикл продолжается
             if action_choice == data.KEYCODES["TURN_CANCEL"]:
-                Game.dices = temp_dices[:]  # возвращение удаленных костей
+                self.dices = temp_dices[:]  # возвращение удаленных костей
                 player.clear_scorepick()
             # Если игрок согласен использовать выбранные кости,
             # то они скрываются.
             else:
-                removed_dices = tools.exclude_array(temp_dices, Game.dices)
+                removed_dices = tools.exclude_array(temp_dices, self.dices)
                 screen.effect_hldices(removed_dices, cp_id=6)
 
         return action_choice
@@ -247,7 +216,6 @@ class Game:
             if auto_msg:
                 screen.display_msg("09_1_scrtotl", player.name,
                                    player.score_total)
-            self.check_win()
 
 
 #  8888888b.   888             d8888  Y88b   d88P  8888888888  8888888b.
