@@ -522,7 +522,7 @@ class AI_easy(AI_meta):
 
         scores = self.score_pick + self.score_turn + self.score_total
         if scores >= gm.high_bar:
-            chance_to_continue = 91
+            chance_to_continue = random.randint(1, 10)
         elif scores >= gm.second_player.score_total:
             chance_to_continue += random.randint(9, 24)
 
@@ -549,8 +549,9 @@ class AI_hard(AI_meta):
     def get_dicechoose(self):
         """Возвращает выбранные ИИ кости."""
         gm = Player.gm
-        dices = gm.dices[:]
+        self.dices_for_pick = gm.dices[:]
         self.claw = []
+        dices = self.dices_for_pick
         singles = dices.count(1) + dices.count(5)
 
         # Если есть диапазон костей, то забираем его
