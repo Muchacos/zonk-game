@@ -45,6 +45,7 @@ def check_combos_any(dices):
 
 
 def cheat_good_dices(amount_of_dices, *, clear=None):
+    """Возвращает хорошие кости (непроигрышные или все, приносящие очки)."""
     if clear is None:
         if chance(r.randint(10, 50)):
             clear = True
@@ -63,6 +64,7 @@ def cheat_good_dices(amount_of_dices, *, clear=None):
 
 
 def cheat_bad_dices(amount_of_dices, loose=True):
+    """Возвращает только плохие кости (одна пятерка или абсолютно ничего)."""
     while True:
         result = [r.choice([2, 3, 4, 6]) for i in range(amount_of_dices)]
         if check_combos_any(result) is False:
