@@ -97,7 +97,7 @@ class Game:
         screen.anim_diceroll(len(dices))
         for i in range(len(self.dices)):
             dices[i] = random.randint(1, 6)
-        Game.temp_dices = dices[:]
+        self.temp_dices = dices[:]
 
         if auto_managing is True:
             screen.display_dices(dices)
@@ -183,7 +183,7 @@ class Game:
         """Возвращает то, что хочет сделать игрок далее."""
         player = self.player
         screen = self.screen
-        temp_dices = Game.temp_dices
+        temp_dices = self.temp_dices
 
         action_choice = player.get_nextaction()
         screen.effect_hldices()
