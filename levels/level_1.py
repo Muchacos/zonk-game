@@ -3,29 +3,22 @@ import data
 
 
 def run(gm, screen):
-    enemy = classes.AI_easy(gm, screen, "zX01")
     player = classes.Human(gm, screen, data.PLAYER_NAME)
-
-    screen.display_msg("03_robhello", data.PLAYER_NAME, enemy.name)
-    screen.display_msg("04_0_gethbar", wait=False)
-
-    while True:
-        hbar = screen.input_str()
-        if not hbar.isdigit():
-            screen.display_msg("04_2_errint",
-                               delay=data.TIMINGS["DELAY-ERR"])
-        elif int(hbar) < 400 or int(hbar) > 20000:
-            screen.display_msg("04_3_badval")
-        else:
-            hbar = int(hbar)
-            break
-        screen.display_msg("04_1_getaehbar", wait=False)
+    enemy = classes.AI_easy(gm, screen, data.ROBOT_RANDOM_NAME)
+    hbar = 100
 
     gm.set_settings(hbar, player, enemy)
     screen.add_players(gm)
     screen.add_high_bar(hbar)
 
-    screen.display_msg("05_gamestart")
+    if data.Level_Progress[1][1] == 0:
+        screen.display_msg("1_welcomelvl1")
+        screen.display_msg("1_lvlinfo1", data.ROBOT_RANDOM_NAME)
+        screen.display_msg("1_lvlinfo2")
+        screen.display_msg("1_lvlinfo3", hbar)
+    else:
+        screen.display_msg("1_welcomelvl2")
+        screen.display_msg("1_welcomelvl2.1")
 
     while gm.game_flag:
         any_combos = gm.roll_dices()
@@ -42,9 +35,7 @@ def run(gm, screen):
             action_choice = gm.get_action_choice()
             if action_choice != data.KEYCODES["TURN_CANCEL"]:
                 gm.add_scores(pick_score, action_choice)
-                if gm.check_win() is True:
-                    screen.display_msg("14_won", gm.player.name)
-                    screen.display_msg("15_gameend")
+                gm.check_win()
                 break
 
         if action_choice == data.KEYCODES["TURN_END"] and gm.game_flag:
@@ -54,6 +45,38 @@ def run(gm, screen):
         elif (action_choice == data.KEYCODES["TURN_CONTINUE"] and
               len(gm.dices) == 0 and gm.game_flag):
             gm.add_dices()
+
+    if gm.player.__type__ == "Human":
+        if data.Level_Progress[1][2] == 0:
+            screen.display_msg("1_winfirst1")
+            screen.display_msg("1_winfirst2")
+        else:
+            screen.display_msg("1_winnotfirst1", data.ROBOT_RANDOM_NAME)
+            screen.display_msg("1_winnotfirst2", data.ROBOT_TACTIC_NAME)
+        data.Level_Progress[1][0] = True
+        data.Level_Progress[1][2] += 1
+
+    else:
+        screen.display_msg("1_loose1")
+        screen.display_msg("1_loose2")
+        screen.display_msg("1_loosechoose1", wait=False)
+        inp = screen.input_str()
+
+        if inp not in ("1", "0"):
+            screen.display_msg("1_loosechoose2")
+            inp = "1"
+        if inp == "1":
+            screen.display_msg("1_loosechoose3")
+        else:
+            screen.display_msg("1_loosechoose4", wait=False)
+            inp = screen.input_str()
+
+            if inp == "1":
+                screen.display_msg("1_loosechoose5")
+            else:
+                screen.display_msg("1_loosechoose6")
+
+    data.Level_Progress[1][1] += 1
 
     gm.add_dices()
     screen.init_zones()
