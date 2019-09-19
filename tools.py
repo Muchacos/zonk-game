@@ -47,7 +47,7 @@ def check_combos_any(dices):
 def cheat_good_dices(amount_of_dices, *, clear=None):
     """Возвращает хорошие кости (непроигрышные или все, приносящие очки)."""
     if clear is None:
-        if chance(r.randint(10, 50)):
+        if chance(r.randint(10, 60)):
             clear = True
         else:
             clear = False
