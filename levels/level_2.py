@@ -4,8 +4,8 @@ import data
 
 def run(gm, screen):
     player = classes.Human(gm, screen, data.PLAYER_NAME)
-    enemy = classes.AI_hard(gm, screen, data.ROBOT_TACTIC_NAME)
-    hbar = 100
+    enemy = classes.Robot_tactic(gm, screen, data.ROBOT_TACTIC_NAME)
+    hbar = 3000
 
     gm.set_settings(hbar, player, enemy)
     screen.add_players(gm)
@@ -16,9 +16,11 @@ def run(gm, screen):
         screen.display_msg("2_lvlinfo1", data.ROBOT_TACTIC_NAME)
         screen.display_msg("2_lvlinfo2")
         screen.display_msg("2_lvlinfo3", hbar)
-    else:
+    elif data.Level_Progress[3][1] == 0:
         screen.display_msg("2_welcomelvl2")
-        screen.display_msg("2_welcomelvl2.2")
+        screen.display_msg("2_welcomelvl2.1")
+    else:
+        screen.display_msg("2_welcomelvl3")
 
     while gm.game_flag:
         any_combos = gm.roll_dices()
@@ -50,11 +52,8 @@ def run(gm, screen):
         if data.Level_Progress[2][2] == 0:
             screen.display_msg("2_winfirst1")
             screen.display_msg("2_winfirst2")
-        elif data.Level_Progress[2][2] == 1:
-            screen.display_msg("2_winsecond1", data.ROBOT_TACTIC_NAME)
-            screen.display_msg("2_winsecond2", data.ROBOT_CALCULATOR_NAME)
         else:
-            screen.display_msg("2_winnotfirst", "...")
+            screen.display_msg("2_winnotfirst")
 
         data.Level_Progress[2][0] = True
         data.Level_Progress[2][2] += 1

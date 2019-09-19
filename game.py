@@ -15,7 +15,7 @@ if len(args) != 1:
     screen.init_zones()
     if args[1] == "-lvl2":
         data.Level_Progress[1][0] = True
-    elif args[1] == "lvl3":
+    elif args[1] == "-lvl3":
         data.Level_Progress[1][0] = True
         data.Level_Progress[2][0] = True
 else:

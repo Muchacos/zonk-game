@@ -4,8 +4,8 @@ import data
 
 def run(gm, screen):
     player = classes.Human(gm, screen, data.PLAYER_NAME)
-    enemy = classes.AI_easy(gm, screen, data.ROBOT_RANDOM_NAME)
-    hbar = 100
+    enemy = classes.Robot_random(gm, screen, data.ROBOT_RANDOM_NAME)
+    hbar = 1500
 
     gm.set_settings(hbar, player, enemy)
     screen.add_players(gm)

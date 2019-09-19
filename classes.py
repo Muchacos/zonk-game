@@ -66,7 +66,7 @@ class Game:
         """Меняет игроков местами."""
         self.player, self.second_player = self.second_player, self.player
         Game.screen.anim_playerhl(self)
-        Game.screen.display_msg("06_whoturn", self.player.name,
+        Game.screen.display_msg("a_whoturn", self.player.name,
                                 delay=data.TIMINGS["DELAY-FST"])
 
     def check_win(self):
@@ -102,7 +102,7 @@ class Game:
         if auto_managing is True:
             screen.display_dices(dices)
             if tools.check_combos_any(dices) is False:
-                screen.display_msg("07_nocombos")
+                screen.display_msg("a_nocombos")
                 self.player.clear_scoreturn()
 
         return tools.check_combos_any(dices)
@@ -166,14 +166,14 @@ class Game:
         if pick_score == 0:
             if raise_bad_all_pick:
                 screen.effect_hldices(hand, cp_id=4)
-                screen.display_msg("10_1_badallpick", player.name)
+                screen.display_msg("a_badallpick", player.name)
                 screen.effect_hldices()
             return pick_score
         # Выводится сообщение, если в руке остались кости, которые не при-
         # несли очки (но они используются далее в игре).
         elif len(hand) > 0 and raise_bad_pick:
             screen.effect_hldices(hand, cp_id=4)
-            screen.display_msg("10_0_badpick")
+            screen.display_msg("a_badpick")
 
         # Добавление очков за выбранные кости
         player.add_scorepick(pick_score)
@@ -208,7 +208,7 @@ class Game:
 
         player.add_scoreturn()
         if auto_msg:
-            screen.display_msg("09_2_scrpick", player.name, pick_score)
+            screen.display_msg("a_scrpick", player.name, pick_score)
 
         # Если игрок хочет закончить ход и сохнанить набранные очки:
         if action_choice == data.KEYCODES["TURN_END"]:
@@ -216,7 +216,7 @@ class Game:
             screen.effect_hldices(screen.scr_dices, cp_id=6)
             player.add_scoretotal()
             if auto_msg:
-                screen.display_msg("09_1_scrtotl", player.name,
+                screen.display_msg("a_scrtotl", player.name,
                                    player.score_total)
 
 
@@ -317,27 +317,27 @@ class Human(Player):
         dices = Player.gm.dices
         screen = Player.screen
         while True:
-            screen.display_msg("08_0_getpick", wait=False)
+            screen.display_msg("a_getpick", wait=False)
             inp = screen.input_str()
             # Проверка, есть ли все выбранные кости среди выпавших костей
             if (inp.isdigit()
                     and all(inp.count(d) <= dices.count(int(d)) for d in inp)):
                 return [int(d) for d in inp]
             else:
-                screen.display_msg("08_1_errpick",
+                screen.display_msg("a_errpick",
                                    delay=data.TIMINGS["DELAY-ERR"])
 
     def get_nextaction(self):
         """Узнает, готов ли игрок рискнуть продолжить ход."""
         screen = Player.screen
         while True:
-            screen.display_msg("13_0_actchoose", wait=False, speedup=2)
+            screen.display_msg("a_actchoose", wait=False, speedup=2)
             inp = screen.input_str()
 
             if inp in data.KEYCODES.values():
                 return inp
             else:
-                screen.display_msg("13_1_badans",
+                screen.display_msg("a_badans",
                                    delay=data.TIMINGS["DELAY-ERR"])
 
 
@@ -350,8 +350,8 @@ class Human(Player):
 #  888  T88b   Y88b. .d88P  888   d88P  Y88b. .d88P     888
 #  888   T88b   "Y88888P"   8888888P"    "Y88888P"      888
 
-class AI_meta(Player):
-    """Представляет базовый класс ИИ.
+class Robot_meta(Player):
+    """Представляет базовый класс Роботов.
 
     take_*combo* -- взятие роботом определенной комбинации костей
 
@@ -359,10 +359,11 @@ class AI_meta(Player):
 
     __type__ = "Robot"
 
-    def __init__(self, game_mode, screen, name):
+    def __init__(self, game_mode, screen, name, thinking=False):
         Player.__init__(self, game_mode, screen, name)
         self.claw = []
         self.dices_for_pick = []
+        self.thinking = thinking
 
     def take_range(self):
         """Забирает в claw наибольший диапазон костей."""
@@ -409,8 +410,8 @@ class AI_meta(Player):
         return out
 
 
-class AI_easy(AI_meta):
-    """Представляет глупый ИИ."""
+class Robot_random(Robot_meta):
+    """Представляет робота, полагающегося на случайность."""
 
     def get_dicechoose(self):
         gm = Player.gm
@@ -472,6 +473,9 @@ class AI_easy(AI_meta):
             else:
                 self.take_single()
 
+        if self.thinking is True:
+            delay = (random.uniform(0.7, 1.5) + len(dices) / 10) * -1
+            Player.screen.display_msg("a_robthink", delay=delay)
         return self.claw
 
     def get_nextaction(self):
@@ -506,15 +510,15 @@ class AI_easy(AI_meta):
 
         choice = tools.chance(chance_to_continue)
         if choice is True:
-            Player.screen.display_msg("12_0_robturnT")
+            Player.screen.display_msg("a_robturnT")
             return data.KEYCODES["TURN_CONTINUE"]
         else:
-            Player.screen.display_msg("12_1_robturnF")
+            Player.screen.display_msg("a_robturnF")
             return data.KEYCODES["TURN_END"]
 
 
-class AI_hard(AI_meta):
-    """Представляет сложиый ИИ."""
+class Robot_tactic(Robot_meta):
+    """Представляет робота-тактика."""
 
     def get_dicechoose(self):
         """Возвращает выбранные ИИ кости."""
@@ -560,8 +564,16 @@ class AI_hard(AI_meta):
             else:
                 self.take_single(1)
 
-        delay = (random.uniform(0.7, 1.5) + len(dices) / 10) * -1
-        Player.screen.display_msg("11_robthink", delay=delay)
+        new_ones, new_fives = dices.count(1), dices.count(5)
+        if new_ones + new_fives > 0:
+            possible_points = new_ones * 100 + new_fives * 50
+            if (possible_points + self.score_pick + self.score_turn
+               + self.score_total > gm.high_bar):
+                self.take_single()
+
+        if self.thinking is True:
+            delay = (random.uniform(0.7, 1.5) + len(dices) / 10) * -1
+            Player.screen.display_msg("a_robthink", delay=delay)
         return self.claw
 
     def get_nextaction(self):
@@ -597,8 +609,8 @@ class AI_hard(AI_meta):
 
         choice = tools.chance(chance_to_continue)
         if choice is True:
-            Player.screen.display_msg("12_0_robturnT")
+            Player.screen.display_msg("a_robturnT")
             return data.KEYCODES["TURN_CONTINUE"]
         else:
-            Player.screen.display_msg("12_1_robturnF")
+            Player.screen.display_msg("a_robturnF")
             return data.KEYCODES["TURN_END"]
