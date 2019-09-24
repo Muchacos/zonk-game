@@ -125,7 +125,7 @@ def roll_dices_for_robot(gm):
 
     screen.display_dices(gm.dices)
     if tools.check_combos_any(gm.dices) is False:
-        screen.display_msg("07_nocombos")
+        screen.display_msg("a_nocombos")
         gm.player.clear_scoreturn()
 
     return tools.check_combos_any(gm.dices)
