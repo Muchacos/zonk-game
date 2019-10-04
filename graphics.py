@@ -254,18 +254,24 @@ class Screen:
 #                                 888                      Y8b d88P
 #                                 888                       "Y88P"
 
-    def display_msg(self, id, *insert, delay=None, wait=None, speedup=None):
+    def display_msg(self, id, *insert, delay=None,
+                    wait=None, speedup=None, inner_idx=None):
         """Печатает сообщение из реестра на заданное время, вставляя данные."""
         stdscr = self.stdscr
         ZONE_MSG = Screen.ZONE_MSG
-        msg = data.MSG_REGISTRY[id]
         settings = self.msg_display_settings
+
         if delay is None:
             delay = settings["delay"]
         if wait is None:
             wait = settings["wait"]
         if speedup is None:
             speedup = settings["speedup"]
+        if inner_idx is not None:
+            msg = data.MSG_REGISTRY[id][inner_idx]
+        else:
+            msg = data.MSG_REGISTRY[id]
+
         ch_print_delay = data.TIMINGS["PRINT-CHR"] / speedup
 
         # Если задержка - отрицательное число, то анимацию
@@ -333,6 +339,12 @@ class Screen:
             self.input_delayinterrupt(delay)
         else:
             time.sleep(abs(delay))
+
+    def display_msg_seq(self, seq_id, delay=None, wait=None, speedup=None):
+        seq_len = len(data.MSG_REGISTRY[seq_id])
+        for i in range(seq_len):
+            self.display_msg(seq_id, delay=delay, wait=wait,
+                             speedup=speedup, inner_idx=i)
 
     def display_dice(self, position, value, cp_id=0):
         """Отображает кость со значением value в координатах y и x."""
