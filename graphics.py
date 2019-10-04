@@ -89,6 +89,7 @@ class Screen:
         """Иниц. stdscr, установка параметров окна теримнала."""
         SH, SW = Screen.SH, Screen.SW
         self.scr_dices = [0] * 6  # индекс - позиция, значение - значение :)
+        self.msg_display_settings = data.MSG_DISPLAY_DEFAULT_SETTINGS.copy()
         self.stdscr = curses.initscr()
         stdscr = self.stdscr
 
@@ -253,11 +254,18 @@ class Screen:
 #                                 888                      Y8b d88P
 #                                 888                       "Y88P"
 
-    def display_msg(self, id, *insert, delay=0, wait=True, speedup=1):
+    def display_msg(self, id, *insert, delay=None, wait=None, speedup=None):
         """Печатает сообщение из реестра на заданное время, вставляя данные."""
         stdscr = self.stdscr
         ZONE_MSG = Screen.ZONE_MSG
         msg = data.MSG_REGISTRY[id]
+        settings = self.msg_display_settings
+        if delay is None:
+            delay = settings["delay"]
+        if wait is None:
+            wait = settings["wait"]
+        if speedup is None:
+            speedup = settings["speedup"]
         ch_print_delay = data.TIMINGS["PRINT-CHR"] / speedup
 
         # Если задержка - отрицательное число, то анимацию
@@ -588,3 +596,22 @@ class Screen:
         for y in range(zone[0], zone[2] + 1):
             stdscr.addstr(y, zone[1], back * zone[5], curses.color_pair(cp_id))
         stdscr.refresh()
+
+    def msg_display_attron(self, *, delay=None, wait=None, speedup=None):
+        settings = self.msg_display_settings
+        if delay is not None:
+            settings["delay"] = delay
+        if wait is not None:
+            settings["wait"] = wait
+        if speedup is not None:
+            settings["speedup"] = speedup
+
+    def msg_display_attroff(self, *, delay=False, wait=False, speedup=False):
+        settings = self.msg_display_settings
+        std_settings = data.MSG_DISPLAY_DEFAULT_SETTINGS
+        if delay is True:
+            settings["delay"] = std_settings["delay"]
+        if wait is True:
+            settings["wait"] = std_settings["wait"]
+        if speedup is True:
+            settings["speedup"] = std_settings["speedup"]

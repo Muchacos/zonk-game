@@ -287,6 +287,12 @@ ROBOT_RANDOM_NAME = "zX01"
 ROBOT_TACTIC_NAME = "h300"
 ROBOT_CALCULATOR_NAME = "Игорь"
 
+MSG_DISPLAY_DEFAULT_SETTINGS = {
+    "delay": 0,
+    "wait": True,
+    "speedup": 1
+}
+
 Level_Progress = {
     1: [False, 0, 0],
     2: [False, 0, 0],
