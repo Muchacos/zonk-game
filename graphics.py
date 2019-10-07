@@ -102,6 +102,7 @@ class Screen:
         curses.noecho()
         stdscr.keypad(True)
         curses.curs_set(0)
+        stdscr.bkgd(" ", curses.color_pair(1))
 
     def __del__(self):
         """Завершение работы экрана и возврат стд. параметров терминала."""
@@ -154,12 +155,12 @@ class Screen:
 
     def init_pairs(self):
         """Установка цветовых пар (используемых цветов)."""
-        curses.init_pair(1, 15, 0)  # Ярко-белый
-        curses.init_pair(2, 26, 0)  # Светло-синий
-        curses.init_pair(3, 39, 0)  # Ярко-голубой
-        curses.init_pair(4, 12, 0)  # Красный
+        curses.init_pair(1, 15, 16)  # Ярко-белый
+        curses.init_pair(2, 26, 16)  # Светло-синий
+        curses.init_pair(3, 39, 16)  # Ярко-голубой
+        curses.init_pair(4, 12, 16)  # Красный
         curses.init_pair(5, 0, 15)  # Ченрый на белом
-        curses.init_pair(6, 0, 0)   # Черный
+        curses.init_pair(6, 16, 16)   # Черный
 
 #
 #        d8b                                888
