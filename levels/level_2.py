@@ -1,12 +1,13 @@
 import classes
 import data
+from levels import game_base_cycle as gbc
 
 
 def run(gm, screen):
     # Установка игровых параметров
     player = classes.Human(gm, screen, data.PLAYER_NAME)
     enemy = classes.Robot_tactic(gm, screen, data.ROBOT_TACTIC_NAME)
-    hbar = 110
+    hbar = data.HIGH_BARS["level_2"]
 
     gm.set_settings(hbar, player, enemy)
     screen.add_players(gm)
@@ -19,34 +20,11 @@ def run(gm, screen):
                            data.ROBOT_TACTIC_NAME)
 
     # Цикл игры уровня
-    while gm.game_flag:
-        any_combos = gm.roll_dices()
-        if any_combos is False:
-            gm.switch_player()
-            gm.add_dices()
-            continue
-
-        while True:
-            pick_score = gm.get_pick()
-            if pick_score == 0:
-                continue
-
-            action_choice = gm.get_action_choice()
-            if action_choice != data.KEYCODES["TURN_CANCEL"]:
-                gm.add_scores(pick_score, action_choice)
-                gm.check_win()
-                break
-
-        if action_choice == data.KEYCODES["TURN_END"] and gm.game_flag:
-            gm.add_dices()
-            gm.switch_player()
-
-        elif (action_choice == data.KEYCODES["TURN_CONTINUE"] and
-              len(gm.dices) == 0 and gm.game_flag):
-            gm.add_dices()
+    gbc.main(gm)
 
     # Действия при победе/поражении
-    if gm.player.__type__ == "Human":
+    winner = gm.player.__type__
+    if winner == "Human":
         screen.display_msg_seq("2_win_seq")
         data.Game_Progress["level_2"]["is_complete"] = True
     else:

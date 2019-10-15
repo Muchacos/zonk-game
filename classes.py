@@ -90,22 +90,21 @@ class Game:
 #        888  888  Y88b.     Y88b.   888  Y88..88P  888  888
 #        "Y888888   "Y8888P   "Y888  888   "Y88P"   888  888
 
-    def roll_dices(self, *, auto_managing=True):
-        """Бросок костей. Иногда они выпадают случайно."""
+    def remdis_dices(self, dices):
+        """Записывает в game_mode и отображает переданные кости."""
         screen = self.screen
-        dices = self.dices
-        screen.anim_diceroll(len(dices))
-        for i in range(len(self.dices)):
-            dices[i] = random.randint(1, 6)
+        self.dices = dices
         self.temp_dices = dices[:]
+        screen.anim_diceroll(len(dices))
+        screen.display_dices(dices)
 
-        if auto_managing is True:
-            screen.display_dices(dices)
-            if tools.check_combos_any(dices) is False:
-                screen.display_msg("a_nocombos")
-                self.player.clear_scoreturn()
-
-        return tools.check_combos_any(dices)
+    def nocombos_managing(self):
+        """Делает что-то, если кости не приносят очков."""
+        if tools.check_combos_any(self.dices) is False:
+            Game.screen.display_msg("a_nocombos")
+            self.player.clear_scoreturn()
+            return False
+        return True
 
     def get_pick(self, *, raise_bad_pick=True, raise_bad_all_pick=True):
         """Получает выбранне игроком кости и выводит очки за них."""

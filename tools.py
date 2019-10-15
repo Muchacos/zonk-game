@@ -44,6 +44,11 @@ def check_combos_any(dices):
     return any([check_combos_row(dices), check_combos_single(dices)])
 
 
+def rand_dices(amount_of_dices):
+    """Возвращает случайные кости."""
+    return [r.randint(1, 6) for i in range(amount_of_dices)]
+
+
 def cheat_good_dices(amount_of_dices, *, clear=None):
     """Возвращает хорошие кости (непроигрышные или все, приносящие очки)."""
     if clear is None:
@@ -63,11 +68,54 @@ def cheat_good_dices(amount_of_dices, *, clear=None):
                 return result
 
 
-def cheat_bad_dices(amount_of_dices, loose=True):
+def cheat_bad_dices(amount_of_dices, onefive=False):
     """Возвращает только плохие кости (одна пятерка или абсолютно ничего)."""
     while True:
         result = [r.choice([2, 3, 4, 6]) for i in range(amount_of_dices)]
         if check_combos_any(result) is False:
-            if loose is False and len(result) != 1:
+            if onefive is True and len(result) != 1:
                 result[0] = 5
             return result
+
+
+def dices_score(dices):
+    """Возвращает макс. возможные очки, получаемые за кости."""
+    score = 0
+    dices = dices.copy()
+
+    if check_combos_range(dices):
+        if 6 in dices:
+            score += 1500
+            dices.clear()
+        else:
+            score += 750
+            for d in range(1, 6):
+                dices.remove(d)
+
+    if check_combos_row(dices):
+        for dice in dices[:]:
+            loc_score = 0
+            row_len = dices.count(dice)
+
+            if row_len >= 3:
+                if dice == 1:
+                    loc_score += 1000
+                else:
+                    loc_score += dice * 100
+                loc_score *= (row_len - 2)
+                score += loc_score
+
+                for i in range(row_len):
+                    dices.remove(dice)
+
+    if check_combos_single(dices):
+        for dice in dices[:]:
+            if dice == 1:
+                score += 100
+                dices.remove(dice)
+
+            elif dice == 5:
+                score += 50
+                dices.remove(dice)
+
+    return score

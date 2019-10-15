@@ -222,6 +222,12 @@ ROBOT_RANDOM_NAME = "zX01"
 ROBOT_TACTIC_NAME = "h300"
 ROBOT_CALCULATOR_NAME = "Игорь"
 
+HIGH_BARS = {
+    "level_1": 2000,
+    "level_2": 3000,
+    "level_3": 4000,
+}
+
 MSG_DISPLAY_DEFAULT_SETTINGS = {
     "delay": 0,
     "wait": True,
