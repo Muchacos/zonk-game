@@ -3,8 +3,57 @@ import tools as tls
 
 
 def main(gm):
+    hbar = gm.high_bar
+
     while gm.game_flag:
-        dices = tls.rand_dices(len(gm.dices))
+        is_human = gm.player.__type__ == "Human"
+        dices_amount = len(gm.dices)
+
+        if is_human:
+            human_scr = gm.player.score_total + gm.player.score_turn
+            robot_scr = (gm.second_player.score_total +
+                         gm.second_player.score_turn)
+            if human_scr >= hbar and tls.chance(40):
+                dices = tls.cheat_good_dices(dices_amount, clear=False)
+            elif robot_scr - human_scr > 500:
+                if tls.chance(80):
+                    dices = tls.cheat_good_dices(dices_amount, clear=False)
+                elif dices_amount <= 4 and tls.chance(80):
+                    dices = tls.cheat_good_dices(dices_amount, clear=True)
+                else:
+                    dices = tls.rand_dices(dices_amount)
+            elif hbar - robot_scr < 300 and tls.chance(75):
+                dices = tls.cheat_good_dices(dices_amount, clear=False)
+            else:
+                dices = tls.rand_dices(dices_amount)
+
+        else:
+            human_scr = (gm.second_player.score_total +
+                         gm.second_player.score_turn)
+            robot_scr = gm.player.score_total + gm.player.score_turn
+            score_to_win = hbar - robot_scr
+
+            for i in range(50):
+                possible_dices = tls.rand_dices(dices_amount)
+                possible_dices_score = tls.dices_score(possible_dices)
+                if possible_dices_score != 0:
+                    if possible_dices_score < score_to_win:
+                        print(possible_dices_score, score_to_win, robot_scr)
+                        break
+                elif tls.chance(70):
+                    continue
+                else:
+                    break
+
+            else:
+                gm.screen.beep()
+                if tls.chance(90):
+                    possible_dices = tls.cheat_bad_dices(dices_amount)
+                elif tls.chance(90):
+                    possible_dices = tls.cheat_bad_dices(dices_amount,
+                                                         onefive=True)
+            dices = possible_dices
+
         gm.remdis_dices(dices)
         any_combos = gm.nocombos_managing()
 
