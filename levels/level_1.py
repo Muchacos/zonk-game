@@ -1,6 +1,6 @@
 import classes
 import data
-from levels import game_base_cycle as gbc
+from levels import game_base_turn as gbt
 
 
 def run(gm, screen):
@@ -19,7 +19,8 @@ def run(gm, screen):
         screen.display_msg_seq("1_welcomelvl_seq")
 
     # Цикл игры уровня
-    gbc.main(gm)
+    while gm.game_flag:
+        gbt.main(gm)
 
     # Действия при победе/поражении
     winner = gm.player.__type__

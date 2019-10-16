@@ -4,7 +4,7 @@ import sys
 import classes
 import data
 import graphics
-from levels import intro, level_1, level_2, level_3
+from levels import intro, level_1, level_2, level_3, unreliable_host
 
 screen = graphics.Screen()
 gm = classes.Game(screen)  # game_mode
@@ -33,6 +33,8 @@ while True:
     else:
         break
     gm.game_flag = True
+
+unreliable_host.run(screen)
 
 # Конец игры
 screen.anim_ending()
