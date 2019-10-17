@@ -9,7 +9,8 @@ from levels import game_base_turn as gbt
 def run(gm, screen):
     # Установка игровых параметров
     player = classes.Human(gm, screen, data.PLAYER_NAME)
-    enemy = classes.Robot_random(gm, screen, data.ROBOT_CALCULATOR_NAME)
+    robname = data.ROBOT_CALCULATOR_NAME
+    enemy = classes.Robot_random(gm, screen, robname)
     hbar = data.HIGH_BARS["level_3"]
 
     gm.set_settings(hbar, player, enemy)
@@ -20,10 +21,11 @@ def run(gm, screen):
     if data.Game_Progress["level_3"]["losses"] == 0:
         screen.display_msg_seq("3_welcomelvl_seq")
 
-    # Цикл игры уровня
+    # Цикл игры, идущий до тех пор, пока игрок не наберет hbar - 500 очков
     while gm.player.__type__ == "Robot" or gm.player.score_total < hbar - 500:
         gbt.main(gm, new_dfh=new_dfh, new_dfr=new_dfr)
 
+    # Кости, которые будут далее выпадать игроку
     special_dices = [
         [2, 2, 2, 3, 4, 6],
         [1, 6, 2],
@@ -32,6 +34,7 @@ def run(gm, screen):
     ]
     i = 0
 
+    # Цикл, идущий до тех пор, пока игрок не закончит ход, взяв особые кости
     while (gm.player.__type__ == "Human" or
            gm.second_player.score_total < hbar - 300):
         if i == 3:
@@ -43,25 +46,28 @@ def run(gm, screen):
         else:
             i = 0
 
+    # Финальный бросок костей робота
     robot_last_dices = tls.cheat_bad_dices(6)
     robot_good_dices = [1, 1, 1, 1, 1, 1]
     screen.anim_diceroll(6)
     screen.display_dices(robot_last_dices)
-    time.sleep(2)
-    screen.display_msg("empty", wait=False)
-    time.sleep(2)
+    time.sleep(4)
     screen.display_dices(robot_good_dices)
-    time.sleep(2)
+    screen.display_msg("empty", wait=False)
+    time.sleep(1.5)
     screen.effect_hldices(robot_good_dices)
     gm.player.add_scorepick(4000)
-    time.sleep(0.7)
+    screen.display_msg("a_robturnF", delay=-1.2)
     screen.effect_hldices(robot_good_dices, cp_id=6)
     gm.player.add_scoreturn()
-    time.sleep(0.7)
+    screen.display_msg("a_scrpick", robname, 4000, delay=-1.2)
     gm.player.add_scoretotal()
+    screen.display_msg("a_scrtotl", robname, gm.player.score_total, delay=-1.2)
+    screen.display_msg("3_robwin", robname)
+    screen.display_msg("empty", wait=False)
     time.sleep(2.5)
     data.Game_Progress["level_3"]["is_complete"] = True
-    screen.init_zones()
+    screen.clear_zone(screen.ZONE_SCORE)
 
 
 def new_dfh(gm):

@@ -22,7 +22,7 @@ if len(args) != 1:
 else:
     intro.run(screen)
 
-# Цикл уровней игры
+# Цикл, запускающий уровни игры
 while True:
     if progress["level_1"]["is_complete"] is False:
         level_1.run(gm, screen)
@@ -34,6 +34,7 @@ while True:
         break
     gm.game_flag = True
 
+# Запуск финальной (на данный момент) части
 unreliable_host.run(screen)
 
 # Конец игры

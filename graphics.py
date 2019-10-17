@@ -658,6 +658,7 @@ class Screen:
         stdscr.refresh()
 
     def msg_display_attron(self, *, delay=None, wait=None, speedup=None):
+        """Включение переданных атрибутов."""
         settings = self.msg_display_settings
         if delay is not None:
             settings["delay"] = delay
@@ -667,6 +668,7 @@ class Screen:
             settings["speedup"] = speedup
 
     def msg_display_attroff(self, *, delay=False, wait=False, speedup=False):
+        """Отключение указанных атрибутов."""
         settings = self.msg_display_settings
         std_settings = data.MSG_DISPLAY_DEFAULT_SETTINGS
         if delay is True:
@@ -677,4 +679,5 @@ class Screen:
             settings["speedup"] = std_settings["speedup"]
 
     def beep(self):
+        """Делает *прлууммм*."""
         curses.beep()
