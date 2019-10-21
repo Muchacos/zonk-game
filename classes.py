@@ -90,6 +90,76 @@ class Game:
 #        888  888  Y88b.     Y88b.   888  Y88..88P  888  888
 #        "Y888888   "Y8888P   "Y888  888   "Y88P"   888  888
 
+    def action(
+               self,
+               human_diceroll_func,
+               robot_diceroll_func,
+               anim_diceroll_func,
+               dice_display_func,
+               action_choice_display_func,
+               pick_choice_display_func
+    ):
+        dices = self.dices
+        player = self.player
+        screen = self.screen
+        is_human = player.__type__ == "Human"
+
+        anim_diceroll_func(len(dices))
+        if is_human:
+            self.dices = human_diceroll_func()
+        else:
+            self.dices = robot_diceroll_func()
+        dice_display_func(dices)
+
+        if not tools.check_combos_any(dices):
+            screen.display_msg("a_nocombos")  # FIXME
+            screen.clear_zone(screen.ZONE_DICES)  # уточнить
+            player.clear_scoreturn()
+            self.add_dices()
+            self.switch_player()
+            return 0
+
+        action_choice = data.KEYCODES["TURN_CANCEL"]
+        while action_choice == data.KEYCODES["TURN_CANCEL"]:
+            pick_choice_display_func()
+            pick = player.get_pick()
+            pick_info = tools.dices_info(pick)
+            pick_score = pick_info["score"]  # уточнить
+            if pick_score == 0:
+                screen.effect_hldices(pick, cp_id=4)  # уточнить
+                screen.display_msg("a_badallpick", player.name)  # FIXME
+                screen.effect_hldices()  # уточнить
+                continue
+
+            player.add_scorepick(pick_score)  # уточнить нижнее
+            pick_good_dices = tools.exclude_array(pick, pick_info["bad_dices"])
+            screen.effect_hldices(pick_good_dices)  # уточнить
+            if pick_info["bad_dices"] is True:
+                screen.effect_hldices(pick_info["bad_dices"], cp_id=4)  # уточ.
+                screen.display_msg("a_badpick")
+
+            action_choice_display_func()
+            action_choice = player.get_action_choice()
+            screen.effect_hldices()  # уточнить
+
+        self.dices = tools.exclude_array(dices, pick_good_dices)
+        screen.effect_hldices(pick_good_dices, cp_id=6)  # уточнить
+        player.add_scoreturn()
+        screen.display_msg("a_scrpick", player.name, pick_score)  # уточнить
+
+        if action_choice == data.KEYCODES["TURN_END"]:
+            player.add_scoretotal()
+            # FIXME
+            screen.display_msg("a_scrtotl", player.name,  player.score_total)
+            screen.clear_zone(screen.ZONE_DICES)  # уточнить
+            self.add_dices()
+            self.switch_player()
+        elif len(dices) == 0:
+            self.add_dices()
+        return 0
+
+
+'''
     def remdis_dices(self, dices):
         """Записывает в game_mode и отображает переданные кости."""
         screen = self.screen
@@ -217,7 +287,7 @@ class Game:
             if auto_msg:
                 screen.display_msg("a_scrtotl", player.name,
                                    player.score_total)
-
+'''
 
 #  8888888b.   888             d8888  Y88b   d88P  8888888888  8888888b.
 #  888   Y88b  888            d88888   Y88b d88P   888         888   Y88b

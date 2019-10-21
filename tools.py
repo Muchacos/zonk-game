@@ -78,8 +78,7 @@ def cheat_bad_dices(amount_of_dices, onefive=False):
             return result
 
 
-def dices_score(dices):
-    """Возвращает макс. возможные очки, получаемые за кости."""
+def dices_info(dices):
     score = 0
     dices = dices.copy()
 
@@ -118,4 +117,4 @@ def dices_score(dices):
                 score += 50
                 dices.remove(dice)
 
-    return score
+    return {"score": score, "bad_dices": dices}
