@@ -121,7 +121,7 @@ class Screen:
         ZONE_MSG = Screen.ZONE_MSG
 
         # Заполнение точками игровое окно
-        self.clear_zone((0, 0, SH - 2, SW - 2, SH, SW), "∙", 2)
+        self.clear_zone((0, 0, SH - 2, SW - 2, SH, SW), "∙", cp=6)
 
         # Включение ярко-белого цвета отрисовки
         stdscr.attron(curses.color_pair(1))
@@ -156,11 +156,11 @@ class Screen:
     def init_pairs(self):
         """Установка цветовых пар (используемых цветов)."""
         curses.init_pair(1, 15, 16)  # Ярко-белый
-        curses.init_pair(2, 26, 16)  # Светло-синий
-        curses.init_pair(3, 39, 16)  # Ярко-голубой
+        curses.init_pair(2, 16, 16)   # Черный
+        curses.init_pair(3, 39, 16)  # Голубой
         curses.init_pair(4, 12, 16)  # Красный
         curses.init_pair(5, 0, 15)  # Ченрый на белом
-        curses.init_pair(6, 16, 16)   # Черный
+        curses.init_pair(6, 26, 16)  # Светло-синий
 
 #
 #        d8b                                888
@@ -272,15 +272,12 @@ class Screen:
             msg = data.MSG_REGISTRY[id][inner_idx]
         else:
             msg = data.MSG_REGISTRY[id]
-
-        ch_print_delay = data.TIMINGS["PRINT-CHR"] / speedup
-
-        # Если задержка - отрицательное число, то анимацию
-        # печати прервать нельзя.
         if delay < 0:
             can_skip = False
         else:
             can_skip = True
+
+        ch_print_delay = data.TIMINGS["PRINT-CHR"] / speedup
 
         def printing_with_animation(with_animation):
             y, x_start = ZONE_MSG[0], ZONE_MSG[1] + 1
@@ -347,29 +344,29 @@ class Screen:
             self.display_msg(seq_id, delay=delay, wait=wait,
                              speedup=speedup, inner_idx=i)
 
-    def display_dice(self, position, value, cp_id=0):
+    def display_dice(self, position, value, *, cp=0):
         """Отображает кость со значением value в координатах y и x."""
         stdscr = self.stdscr
         y, x = Screen.DICES_POSITIONS[position]
-        stdscr.attron(curses.color_pair(cp_id))  # включение цвета печати
+        stdscr.attron(curses.color_pair(cp))  # включение цвета печати
 
         # Построковая печать костей
         for idx, line in enumerate(data.ASCII_DICES[value]):
             # Печать первой строки с подчеркиваниями посередине, "крыша" кости
             if idx == 0 and value != 0:
                 stdscr.addstr(y, x + 1, line[:-2],
-                              curses.color_pair(cp_id) + curses.A_UNDERLINE)
+                              curses.color_pair(cp) + curses.A_UNDERLINE)
             # Печать последней строки с подчеркиваниями посередине, "дно" кости
             elif idx == 3 and value != 0:
                 stdscr.addstr(y + idx, x, line,
-                              curses.color_pair(cp_id) + curses.A_UNDERLINE)
+                              curses.color_pair(cp) + curses.A_UNDERLINE)
                 stdscr.addch(y + 3, x, "│")
                 stdscr.addch(y + 3, x + 6, "│")
             # Печать остальных строк
             else:
                 stdscr.addstr(y + idx, x, line)
 
-        stdscr.attroff(curses.color_pair(cp_id))  # отключение цвета печати
+        stdscr.attroff(curses.color_pair(cp))  # отключение цвета печати
 
     def display_dices(self, dices):
         """Выводит на экран кости из списка dices в случайные позиции."""
@@ -580,7 +577,7 @@ class Screen:
 #        Y8b.      888     888    Y8b.      Y88b.     Y88b.
 #         "Y8888   888     888     "Y8888    "Y8888P   "Y888  88888888
 
-    def effect_hldices(self, dices=[], *, cp_id=3):
+    def effect_hldices(self, dices=[], *, cp=3):
         """Выделяет или снимает выделение с костей."""
         scr_dices = self.scr_dices[:]
         # Пустой массив dices означает, что нужно снять выделение.
@@ -588,7 +585,7 @@ class Screen:
         if dices != []:
             for value in dices:
                 position = scr_dices.index(value)
-                self.display_dice(position, value, cp_id)
+                self.display_dice(position, value, cp=cp)
                 scr_dices[position] = 0
         else:
             for position, value in enumerate(scr_dices):
@@ -650,11 +647,11 @@ class Screen:
 #        Y8b.      888       X88  Y8b.
 #         "Y8888   888   88888P'   "Y8888
 
-    def clear_zone(self, zone, back=" ", cp_id=0):
+    def clear_zone(self, zone, back=" ", *, cp=0):
         """Принимает конст. ZONE_*, задний фон, цвет, и отчищает эту зону."""
         stdscr = self.stdscr
         for y in range(zone[0], zone[2] + 1):
-            stdscr.addstr(y, zone[1], back * zone[5], curses.color_pair(cp_id))
+            stdscr.addstr(y, zone[1], back * zone[5], curses.color_pair(cp))
         stdscr.refresh()
 
     def msg_display_attron(self, *, delay=None, wait=None, speedup=None):
