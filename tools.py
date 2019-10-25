@@ -1,4 +1,4 @@
-"""Функции этого модуля упрощают работу над игровой механикой."""
+"""Функции этого модуля упрощают создание игровой механики."""
 import random as r
 
 import data
@@ -69,7 +69,7 @@ def cheat_good_dices(amount_of_dices, *, clear=None):
 
 
 def cheat_bad_dices(amount_of_dices, onefive=False):
-    """Возвращает только плохие кости (одна пятерка или абсолютно ничего)."""
+    """Возвращает только плохие кости (либо одну пятерку)."""
     while True:
         result = [r.choice([2, 3, 4, 6]) for i in range(amount_of_dices)]
         if check_combos_any(result) is False:
@@ -79,6 +79,7 @@ def cheat_bad_dices(amount_of_dices, onefive=False):
 
 
 def dices_info(dices):
+    """Возвращает информацию о переданных костях в соответсвующем словаре."""
     score = 0
     dices = dices.copy()
 

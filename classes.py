@@ -1,4 +1,4 @@
-"""Тут содержатся все классы, составляющие игровую логику."""
+"""Тут содержатся все классы, составляющие основу игровой логики."""
 import random as r
 
 import data
@@ -19,39 +19,29 @@ class Game:
 
     Термины:
     Ход (turn) -- событие, происходящее, пока игрок совершает действия (action)
-    Действие (action) -- короткое событие, в котором игрок что-то делает
-    Кости (dice/s) -- целч. переменные, представляющие игральные кости
-    Очки для победы (high_bar) -- целч. значение, указывающее сколько итоговых
+    Действие (action) -- основное игровое событие
+    Очки для победы (high_bar) -- значение, указывающее, сколько итоговых
                                   очков необходимо набрать для победы.
 
-    Поля класса:
-    screen -- экземпляр класса Screen, представляющий экран игры
-
-    Поля экземпляров:
+    Поля:
+    dices -- список, содержащий от 1 до 6 игральных костей
+    player -- текущий игрок
+    screen -- экран игры
+    high_bar -- значение очков, необходимых для победы
     game_flag -- булевая переменная, указывающаяя может ли продолжаться игра
-    dices -- список, содержащий от 1 до 6 игральных костей (их целочисленные
-             значения)
-    player -- текущий игрок (экземпляр класса Player)
-    second_player -- второй игрок
-    high_bar -- цел. значение очков необходимых для победы
+    second_player -- второй (предыдущий/следующий) игрок
 
     Методы:
-    add_dices -- добавляет недостающие кости
+    action -- функция, представляющая основное игровое событие
     check_win -- проверяет, выйграл ли игрок
-
-    Методы хода (функционал хода):
-    roll_dices -- представляет бросок костей
-    get_pick -- получет от игрока выбранные им кости
-    get_action_choice -- получает от игрока выбранный им вариант действия
-    add_scores -- добавляет очки за кости/ход
-
+    set_settings -- устанавливает игроков и high_bar
+    switch_player -- меняет игроков местами
 
     """
 
     screen = None
 
     def __init__(self, screen):
-        """Инициализация."""
         Game.screen = screen
         self.game_flag = True
         self.dices = [1] * 6
@@ -63,21 +53,18 @@ class Game:
         self.second_player = enemy
 
     def switch_player(self):
-        """Меняет игроков местами."""
         self.player, self.second_player = self.second_player, self.player
         Game.screen.anim_playerhl(self)
         Game.screen.display_msg("a_whoturn", self.player.name,
                                 delay=data.TIMINGS["DELAY-FST"])
 
     def check_win(self):
-        """Опускает game_flag в случае выйгрыша текущего игрока."""
         if self.player.score_total >= self.high_bar:
             self.game_flag = False
             return True
         return False
 
     def add_dices(self):
-        """Добавляет недостающие кости (до 6 штук)."""
         self.dices.extend([1] * (6 - len(self.dices)))
 
 #
@@ -302,20 +289,10 @@ class Game:
 class Player:
     """Представляет родительский класс игрока.
 
-    Поля класса:
-    gm -- основной функционал игры
-    screen -- экран с полем для ввода данных
-
-    Поля экземпляра:
-    name -- имя игрока
-    score_total -- итоговое число очков
-    score_turn -- число очков за ход
-    score_pick -- число очков за выбранные кости
-
-    Методы:
-    (add_*score_type*
-    clear_*score_type*) -- добавление/удаление очков. Все изменения
-                           отображаются на экране.
+    Методы подклассов:
+    get_dicechoose -- получает ввод от игрока с выбранными костями
+    get_actchoice -- получает ввод от игрока с информацией, хочет ли он
+                     продолжить/закончить ход или выбрать другие кости
 
     """
 
@@ -323,7 +300,6 @@ class Player:
     screen = None
 
     def __init__(self, game_mode, screen, name):
-        """Инициализация."""
         Player.gm = game_mode
         Player.screen = screen
         self.name = name
@@ -332,26 +308,22 @@ class Player:
         self.score_pick = 0
 
     def add_scoretotal(self):
-        """Добавляет score_turn к score_total."""
         self.score_total += self.score_turn
         self.score_turn = 0
         Player.screen.display_score(self, "turn")  # удаление очков с экрана
         Player.screen.display_score(self, "total")
 
     def add_scoreturn(self):
-        """Перемещает score_pick в score_turn."""
         self.score_turn += self.score_pick
         self.score_pick = 0
         Player.screen.display_score(self, "pick")  # удаление очков с экрана
         Player.screen.display_score(self, "turn")
 
     def add_scorepick(self, score):
-        """Увеличивает score_pick на score"""
         self.score_pick += score
         Player.screen.display_score(self, "pick")
 
     def clear_scoreturn(self):
-        """Отчищает score_turn (очки за ход)."""
         self.score_turn = 0
         Player.screen.display_score(self, "turn")
 
@@ -371,18 +343,11 @@ class Player:
 
 
 class Human(Player):
-    """Представляет игрока по ту сторону экрана.
-
-    Методы:
-    get_dicechoose -- получает ввод от игрока с выбранными костями
-    get_nextaction -- получает ввод от игрока, хочет ли он продолжить ход
-
-    """
+    """Представляет игрока по ту сторону экрана."""
 
     __type__ = "Human"
 
     def get_dicechoose(self):
-        """Возвращает выбранные игроком кости, если те существуют."""
         dices = Player.gm.dices
         screen = Player.screen
         while True:
@@ -397,7 +362,6 @@ class Human(Player):
                                    delay=data.TIMINGS["DELAY-ERR"])
 
     def get_nextaction(self):
-        """Узнает, готов ли игрок рискнуть продолжить ход."""
         screen = Player.screen
         while True:
             screen.display_msg("a_actchoose", wait=False, speedup=2)
@@ -422,7 +386,13 @@ class Human(Player):
 class Robot_meta(Player):
     """Представляет базовый класс Роботов.
 
-    take_*combo* -- взятие роботом определенной комбинации костей
+    Поля:
+    claw -- клешня робота, в которой он хранит выбранные кости
+    dices_for_pick -- копия списка с выпавшими костями. Ее использование
+                      освобождает от передачи списка dices как аргумента в
+                      функции take_*
+    thinking -- булевая переменная, определяющая, будет ли робот думать,
+                задерживая свой ход
 
     """
 
@@ -470,7 +440,7 @@ class Robot_meta(Player):
                     amount -= 1
 
     def rowcombo_dice(self):
-        """Возвращает значения костей, образующих комбо 'row'."""
+        """Возвращает значение костей, образующих комбо 'row'."""
         dices = self.dices_for_pick
         out = []
         for d in dices:
@@ -590,7 +560,6 @@ class Robot_tactic(Robot_meta):
     """Представляет робота-тактика."""
 
     def get_dicechoose(self):
-        """Возвращает выбранные ИИ кости."""
         gm = Player.gm
         self.dices_for_pick = gm.dices[:]
         self.claw = []
@@ -646,10 +615,10 @@ class Robot_tactic(Robot_meta):
         return self.claw
 
     def get_nextaction(self):
-        """Узнает, готов ли робот рискнуть продолжить ход."""
 
-        # Возвращает шанс продолжить ход по графику y = -2.5(x-200)^1/2 + 100
         def chance_curve(x):
+            """Возвращает шанс продолжить ход, вычисляемый функцией 'y'."""
+            # x - кол-во очков, y - шанс
             if x < 200:
                 y = 100
             elif x > 1800:

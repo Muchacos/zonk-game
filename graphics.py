@@ -48,9 +48,8 @@ class Screen:
         display_score -- выводит/убирает с экрана очки игрока
     Tип anim_:
         Функции, проигрывающие анимации
-        animbase_savezone -- возвращает массив с данными по каждому символу
-                             в заданной зоне. dis
         anim_ending -- анимация сдвига всего экрана вверх
+        anim_paintui -- постепенно прорисовывает UI
         anim_diceroll -- анимация броска костей anim
         anim_playerhl -- анимация подсветки текущего игрока
         anim_arrowflick -- анимация мигающей стрелки
@@ -67,6 +66,9 @@ class Screen:
 
     clear_zone -- отчищает указанную игровую зону
     init_pairs -- инициализация цветовых пар (используемых цветов)
+    msg_display_attron -- включение переданных атрибутов печати сообщений
+    msg_display_attroff -- отключение переданных атрибутов печати сообщений
+    beep -- Делает *прлууммм*.
 
     """
 
@@ -86,7 +88,6 @@ class Screen:
     }
 
     def __init__(self):
-        """Иниц. stdscr, установка параметров окна теримнала."""
         SH, SW = Screen.SH, Screen.SW
         self.scr_dices = [0] * 6  # индекс - позиция, значение - значение :)
         self.msg_display_settings = data.MSG_DISPLAY_DEFAULT_SETTINGS.copy()
@@ -105,7 +106,6 @@ class Screen:
         stdscr.bkgd(" ", curses.color_pair(1))
 
     def __del__(self):
-        """Завершение работы экрана и возврат стд. параметров терминала."""
         curses.beep()
         curses.echo()
         curses.nocbreak()
@@ -154,7 +154,6 @@ class Screen:
         stdscr.refresh()
 
     def init_pairs(self):
-        """Установка цветовых пар (используемых цветов)."""
         curses.init_pair(1, 15, 16)  # Ярко-белый
         curses.init_pair(2, 16, 16)   # Черный
         curses.init_pair(3, 39, 16)  # Голубой
@@ -176,7 +175,6 @@ class Screen:
 #                       888
 
     def input_str(self):
-        """Получает пользовательский ввод в зоне для ввода и возвращает его."""
         stdscr = self.stdscr
         ZONE_INPUT = Screen.ZONE_INPUT
         inp = ""
@@ -230,7 +228,6 @@ class Screen:
         return inp
 
     def input_delayinterrupt(self, delay):
-        """Создает задержку. Возвращает True, при прерывании её нажатием."""
         stdscr = self.stdscr
         curses.flushinp()
         stdscr.timeout(round(delay * 1000))  # перевод в миллесекунды
@@ -257,7 +254,6 @@ class Screen:
 
     def display_msg(self, id, *insert, delay=None,
                     wait=None, speedup=None, inner_idx=None):
-        """Печатает сообщение из реестра на заданное время, вставляя данные."""
         stdscr = self.stdscr
         ZONE_MSG = Screen.ZONE_MSG
         settings = self.msg_display_settings
@@ -284,7 +280,6 @@ class Screen:
             insert_idx = 0
             fill = 1  # заполненность текущей строки по x
 
-            # Отчищение зоны сообщений и перемещение курсора в ее начало
             self.clear_zone(ZONE_MSG)
             stdscr.move(y, x_start)
 
@@ -345,7 +340,6 @@ class Screen:
                              speedup=speedup, inner_idx=i)
 
     def display_dice(self, position, value, *, cp=0):
-        """Отображает кость со значением value в координатах y и x."""
         stdscr = self.stdscr
         y, x = Screen.DICES_POSITIONS[position]
         stdscr.attron(curses.color_pair(cp))  # включение цвета печати
@@ -369,7 +363,6 @@ class Screen:
         stdscr.attroff(curses.color_pair(cp))  # отключение цвета печати
 
     def display_dices(self, dices):
-        """Выводит на экран кости из списка dices в случайные позиции."""
         self.scr_dices = [0] * 6
         scr_dices = self.scr_dices
 
@@ -386,7 +379,6 @@ class Screen:
         self.stdscr.refresh()
 
     def display_score(self, player, score_type):
-        """Печатает очки игоков (по типу) в зоне для очков."""
         stdscr = self.stdscr
         ZONE_SCORE = Screen.ZONE_SCORE
 
@@ -431,7 +423,6 @@ class Screen:
 #        "Y888888  888  888  888  888  888  888  88888888
 
     def anim_playerhl(self, game_mode):
-        """Плавно перемещает выделение с предыдущего на текущего игрока."""
         stdscr = self.stdscr
         ZONE_SCORE = Screen.ZONE_SCORE
         y = ZONE_SCORE[0] + 1
@@ -471,16 +462,13 @@ class Screen:
                 time.sleep(0.03)
 
     def anim_diceroll(self, num_of_dices):
-        """Проигрывает анимацию броска костей."""
         rand_dices = []
-        # Случайный выбор переданного кол-во костей и их показ на доли секунд
         for k in range(10):
             rand_dices = [random.randint(1, 6) for i in range(num_of_dices)]
             self.display_dices(rand_dices)
             time.sleep(0.1)
 
     def anim_arrowflick(self, y, x):
-        """Создает мигающую стрелку и убирет её по нажатию."""
         stdscr = self.stdscr
         curr_cp, next_cp = 0, 6
         interrupt = False
@@ -493,7 +481,6 @@ class Screen:
         stdscr.addstr(y, x, " ")
 
     def anim_percharword(self, word, ch_print_delay, can_skip):
-        """Посимвольно печатает слово. Возвращает 0 в случае успеха."""
         stdscr = self.stdscr
 
         curses.flushinp()
@@ -512,7 +499,6 @@ class Screen:
         return 0
 
     def anim_ending(self):
-        """Сдвигает экран вверх."""
         stdscr = self.stdscr
         stdscr.move(0, 0)
         for i in range(Screen.SH - 1):
@@ -521,7 +507,6 @@ class Screen:
             time.sleep(0.04)
 
     def anim_paintui(self):
-        """Постепенно прорисовывает UI."""
         stdscr = self.stdscr
         SH, SW = Screen.SH, Screen.SW
         ZONE_DICES = Screen.ZONE_DICES
@@ -578,7 +563,6 @@ class Screen:
 #         "Y8888   888     888     "Y8888    "Y8888P   "Y888  88888888
 
     def effect_hldices(self, dices=[], *, cp=3):
-        """Выделяет или снимает выделение с костей."""
         scr_dices = self.scr_dices[:]
         # Пустой массив dices означает, что нужно снять выделение.
         # Непустой - выделение создать.
@@ -593,7 +577,6 @@ class Screen:
         self.stdscr.refresh()
 
     def effect_hlplayers(self, game_mode):
-        """Выделяет имя текущего игрока."""
         stdscr = self.stdscr
         ZONE_SCORE = Screen.ZONE_SCORE
         p1, p2 = game_mode.player, game_mode.second_player
@@ -621,7 +604,6 @@ class Screen:
 #        "Y888888   "Y88888   "Y88888  88888888
 
     def add_players(self, game_mode):
-        """Печатает на экране имена игроков в зоне для очков."""
         stdscr = self.stdscr
         ZONE_SCORE = Screen.ZONE_SCORE
         name1, name2 = game_mode.player.name, game_mode.second_player.name
@@ -632,7 +614,6 @@ class Screen:
         self.effect_hlplayers(game_mode)
 
     def add_high_bar(self, hbar):
-        """Печатает число очков для победы в зоне для очков."""
         ZONE_SCORE = Screen.ZONE_SCORE
         self.stdscr.addstr(ZONE_SCORE[0] + 7, ZONE_SCORE[1] + 9, str(hbar),
                            curses.A_UNDERLINE)
@@ -648,14 +629,12 @@ class Screen:
 #         "Y8888   888   88888P'   "Y8888
 
     def clear_zone(self, zone, back=" ", *, cp=0):
-        """Принимает конст. ZONE_*, задний фон, цвет, и отчищает эту зону."""
         stdscr = self.stdscr
         for y in range(zone[0], zone[2] + 1):
             stdscr.addstr(y, zone[1], back * zone[5], curses.color_pair(cp))
         stdscr.refresh()
 
     def msg_display_attron(self, *, delay=None, wait=None, speedup=None):
-        """Включение переданных атрибутов."""
         settings = self.msg_display_settings
         if delay is not None:
             settings["delay"] = delay
@@ -665,7 +644,6 @@ class Screen:
             settings["speedup"] = speedup
 
     def msg_display_attroff(self, *, delay=False, wait=False, speedup=False):
-        """Отключение указанных атрибутов."""
         settings = self.msg_display_settings
         std_settings = data.MSG_DISPLAY_DEFAULT_SETTINGS
         if delay is True:
@@ -676,5 +654,4 @@ class Screen:
             settings["speedup"] = std_settings["speedup"]
 
     def beep(self):
-        """Делает *прлууммм*."""
         curses.beep()
