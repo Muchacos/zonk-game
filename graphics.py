@@ -89,12 +89,11 @@ class Screen:
 
     def __init__(self):
         SH, SW = Screen.SH, Screen.SW
-        self.scr_dices = [0] * 6  # индекс - позиция, значение - значение :)
+        self.scr_dices = [0] * 6
         self.msg_display_settings = data.MSG_DISPLAY_DEFAULT_SETTINGS.copy()
         self.stdscr = curses.initscr()
         stdscr = self.stdscr
 
-        # Настройка окна консоли
         os.system("mode con: cols={0} lines={1}".format(SW, SH))
         stdscr.resize(SH, SW)
         curses.start_color()
@@ -120,10 +119,9 @@ class Screen:
         ZONE_SCORE = Screen.ZONE_SCORE
         ZONE_MSG = Screen.ZONE_MSG
 
-        # Заполнение точками игровое окно
+        # Заполнение точками игрового окна
         self.clear_zone((0, 0, SH - 2, SW - 2, SH, SW), "∙", cp=6)
 
-        # Включение ярко-белого цвета отрисовки
         stdscr.attron(curses.color_pair(1))
         for zone, txt in ([ZONE_DICES, "┤dices├"], [ZONE_SCORE, "┤score├"],
                           [ZONE_INPUT, "┤input├"], [ZONE_MSG, "┤msg├"]):
@@ -137,7 +135,6 @@ class Screen:
             stdscr.addstr(uy, rx - len(txt) - 2, txt)
             self.clear_zone(zone)
 
-        # Добавление внутренностей окна Score
         scoretxts = [" Tot _____    _____ ",
                      " Tur _____    _____ ",
                      "     +        +     ",
@@ -147,9 +144,7 @@ class Screen:
             stdscr.addstr(ZONE_SCORE[0] + y, ZONE_SCORE[1], scoretxts[idx])
             idx += 1
 
-        # Добавление стрелки на край окна для ввода
         stdscr.addstr(ZONE_INPUT[0], ZONE_INPUT[1] - 1, ">")
-        # Выключение цвета отрисовки
         stdscr.attroff(curses.color_pair(1))
         stdscr.refresh()
 
@@ -181,47 +176,46 @@ class Screen:
 
         stdscr.move(ZONE_INPUT[0], ZONE_INPUT[1])
         curses.curs_set(1)
-        curses.flushinp()  # сброс всех буфферов ввода
+        curses.flushinp()
 
         # Пока не запонится поле для ввода
         while len(inp) < ZONE_INPUT[4] * ZONE_INPUT[5] - 1:
             key_id = stdscr.getch()
             key = chr(key_id)
 
-            # Вывод клавиши на экран, если это цифра или буква
+            # Если нажата клавиша цифры или буквы
             if key.isalpha() or key_id in range(32, 65):
                 stdscr.addstr(key)
                 inp += key
-
-                cy, cx = stdscr.getyx()  # положение курсора
                 # Если курсор достиг края, он перемещается на след. строку
+                cy, cx = stdscr.getyx()
                 if cx == ZONE_INPUT[1] + ZONE_INPUT[5]:
                     stdscr.move(cy + 1, ZONE_INPUT[1])
 
-            # Нажат ли Backspase и есть ли возможность что-то стереть
+            # Если нажат Enter
+            elif key_id in (10, 13):
+                break
+
+            # Если нажат Backspase (и есть что стереть)
             elif key_id == 8 and inp != "":
                 cy, cx = stdscr.getyx()
-                # Если курсор находится в начале новой строки, то сотрется
-                # символ, находящийся в конце предыдущей
-                if cx == ZONE_INPUT[1]:
-                    dely = cy - 1
-                    delx = ZONE_INPUT[1] + ZONE_INPUT[5] - 1
-                # Иначе сотрется символ, находящийся за курсором
-                else:
+                # Если курсор не находится в начале новой строки, то сотрется
+                # символ, находящийся за курсором
+                if cx != ZONE_INPUT[1]:
                     dely = cy
                     delx = cx - 1
+                # Иначе сотрется символ, находящийся в конце предыдущей строки
+                else:
+                    dely = cy - 1
+                    delx = ZONE_INPUT[1] + ZONE_INPUT[5] - 1
                 stdscr.addch(dely, delx, " ")  # удаление = замена на пробел
                 stdscr.move(dely, delx)
                 inp = inp[:-1]
 
-            # Если нажат Esc, то удаляется ввод и курсор перемещается в начало
+            # Если нажат Esc
             elif key_id == 27:
                 self.clear_zone(ZONE_INPUT)
                 inp = ""
-
-            # Если нажат Enter, то ввод заканчивается
-            elif key_id in (10, 13):
-                break
 
         curses.curs_set(0)
         self.clear_zone(ZONE_INPUT)
@@ -290,12 +284,12 @@ class Screen:
                     insert_idx += 1
                 # Пауза в печати. Не ставится, если печать без анимации
                 elif word == "%p":
-                    if with_animation is True:
+                    if with_animation:
                         time.sleep(data.TIMINGS["PRINT-PAU"])
                     continue
 
-                # Переход на новую строку по заполненности предыдущей
-                # или по спец. символу.
+                # Переход на новую строку по заполненности предыдущей или
+                # по спец. символу.
                 if fill + len(word) + 1 >= ZONE_MSG[5] or word == "%n":
                     y += 1
                     fill = 1
@@ -314,8 +308,6 @@ class Screen:
                 fill += len(word) + 1  # увеличение заполненности строки
 
             return 0
-
-        # Печать с анимацией. Если она была прервана, то печать без анимации
         result = printing_with_animation(True)
         if result != 0:
             printing_with_animation(False)
@@ -342,9 +334,8 @@ class Screen:
     def display_dice(self, position, value, *, cp=0):
         stdscr = self.stdscr
         y, x = Screen.DICES_POSITIONS[position]
-        stdscr.attron(curses.color_pair(cp))  # включение цвета печати
 
-        # Построковая печать костей
+        stdscr.attron(curses.color_pair(cp))
         for idx, line in enumerate(data.ASCII_DICES[value]):
             # Печать первой строки с подчеркиваниями посередине, "крыша" кости
             if idx == 0 and value != 0:
@@ -356,24 +347,20 @@ class Screen:
                               curses.color_pair(cp) + curses.A_UNDERLINE)
                 stdscr.addch(y + 3, x, "│")
                 stdscr.addch(y + 3, x + 6, "│")
-            # Печать остальных строк
             else:
                 stdscr.addstr(y + idx, x, line)
-
-        stdscr.attroff(curses.color_pair(cp))  # отключение цвета печати
+        stdscr.attroff(curses.color_pair(cp))
 
     def display_dices(self, dices):
         self.scr_dices = [0] * 6
         scr_dices = self.scr_dices
 
-        # Зопись костей в scr_dices со случайными позициями
+        # Запись переданных костей в scr_dices со случайными позициями
         positions = [i for i in range(6)]
         random.shuffle(positions)
         for i, value in enumerate(dices):
             scr_dices[positions[i]] = value
 
-        # Отображение всех костей из scr_dices. "Нулевые" значения отчищают
-        # свои позиции. Так отчищение зоны происходит автоматически.
         for position, value in enumerate(scr_dices):
             self.display_dice(position, value)
         self.stdscr.refresh()
@@ -382,7 +369,6 @@ class Screen:
         stdscr = self.stdscr
         ZONE_SCORE = Screen.ZONE_SCORE
 
-        # Определение строки (для каждой свой тип очков)
         if score_type == "total":
             score = player.score_total
             y = ZONE_SCORE[0] + 3
@@ -393,8 +379,7 @@ class Screen:
             score = player.score_pick
             y = ZONE_SCORE[0] + 6
 
-        # Определение столбца (для каждого свой игрок)
-        if player.__type__ == "Human":
+        if player.type == "Human":
             x = ZONE_SCORE[1] + 5
         else:
             x = ZONE_SCORE[1] + 14
@@ -404,8 +389,7 @@ class Screen:
                 stdscr.addstr(y, x, "+{}".format(score), curses.color_pair(3))
             else:
                 stdscr.addstr(y, x, str(score), curses.A_UNDERLINE)
-        else:
-            # Отчищение строки, если очков нет
+        else:  # Отчищение строки, если очков нет
             if score_type == "pick":
                 stdscr.addstr(y, x, "+" + " " * 5)
             else:
@@ -427,20 +411,20 @@ class Screen:
         ZONE_SCORE = Screen.ZONE_SCORE
         y = ZONE_SCORE[0] + 1
 
-        # Если текущий игрок - человек, то выделение перемещается справо
+        # Если текущий игрок - человек, то выделение перемещается справa
         # налево (с робота на человека). В обратном случае, наоборот.
-        if game_mode.player.__type__ == "Human":
+        if game_mode.player.type == "Human":
             name_h = game_mode.player.name
             name_r = game_mode.second_player.name
             for i in range(9 + len(name_r)):
-                # Установка x_forward для выделения,  x_backward для его снятия
+                # Установка x_forward для выделения, x_backward для его снятия
                 x_f = ZONE_SCORE[1] + 14 - i
                 x_b = ZONE_SCORE[1] + 14 + len(name_r) - i
 
                 # Ограничение, чтобы выделение не заходило за имя человека
                 if x_f >= ZONE_SCORE[1] + 5:
                     stdscr.chgat(y, x_f, 1, curses.color_pair(5))
-                # Ограничение, чтобы выделения не снималось с имени человека
+                # Ограничение, чтобы выделение не снималось с имени человека
                 if x_b >= ZONE_SCORE[1] + 5 + len(name_h):
                     stdscr.chgat(y, x_b, 1, curses.color_pair(0))
 
@@ -485,16 +469,14 @@ class Screen:
 
         curses.flushinp()
         stdscr.timeout(0)
-
         for alpha in word + " ":
             stdscr.addch(alpha)
             stdscr.refresh()
-
+            # Если игрок нажал кнопку и можно пропустить анимацию
             if stdscr.getch() != -1 and can_skip:
                 stdscr.timeout(-1)
                 return -1
             time.sleep(ch_print_delay)
-
         stdscr.timeout(-1)
         return 0
 
@@ -564,14 +546,13 @@ class Screen:
 
     def effect_hldices(self, dices=[], *, cp=3):
         scr_dices = self.scr_dices[:]
-        # Пустой массив dices означает, что нужно снять выделение.
-        # Непустой - выделение создать.
+
         if dices != []:
             for value in dices:
                 position = scr_dices.index(value)
                 self.display_dice(position, value, cp=cp)
                 scr_dices[position] = 0
-        else:
+        else:  # Пустой список dices означает, что нужно снять выделение.
             for position, value in enumerate(scr_dices):
                 self.display_dice(position, value)
         self.stdscr.refresh()
@@ -610,7 +591,6 @@ class Screen:
 
         stdscr.addstr(ZONE_SCORE[0] + 1, ZONE_SCORE[1] + 5, name1)
         stdscr.addstr(ZONE_SCORE[0] + 1, ZONE_SCORE[1] + 14, name2)
-
         self.effect_hlplayers(game_mode)
 
     def add_high_bar(self, hbar):

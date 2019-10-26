@@ -470,14 +470,17 @@ class Robot_r(Robot_meta):
                 self.take_single(r.choice([1, 2]))
 
         elif t.check_combos_row(dices):
+            # Если костей два ряда, то забираем оба с шансом 90%
             if len(self.rowcombo_dice()) > 1 and t.chance(90):
                 self.take_row()
             else:
                 row_dice = self.rowcombo_dice()[0]
+                # Вместо ряда забираем единичные кости, если ряд состоит из них
                 if ((row_dice == 1 and fives != 0 and t.chance(36))
                    or (row_dice == 5 and ones != 0 and t.chance(40))):
                     self.take_single()
                 elif row_dice not in (1, 5):
+                    # Забираем ещи и единичные с шансом 40%
                     if ones + fives > 0 and t.chance(40):
                         self.take_single()
                         self.take_row()
@@ -486,11 +489,13 @@ class Robot_r(Robot_meta):
                 else:
                     self.take_row()
 
+        # Если остались единичные и мы брали кости
         if t.check_combos_single(dices) and len(self.claw) != 0:
+            # Если все оставшиеся кости - единичные
             if len(dices) == ones + fives:
-                if t.chance(84):
+                if t.chance(84):  # То берем их все с шансом 84%
                     self.take_single()
-                else:
+                else:  # Либо забираем их случайное количество (но не все)
                     self.take_single(r.choice(range(1, len(dices))))
             elif ones + fives > 2 and t.chance(50):
                 self.take_single(2)
@@ -503,6 +508,7 @@ class Robot_r(Robot_meta):
                     self.take_single()
                 else:
                     self.take_single(r.choice(range(1, len(dices))))
+            # Забираем 3/2/1/все единичные кости по условиям
             elif ones + fives == 4 and t.chance(73):
                 self.take_single(3)
             elif ones + fives > 2 and t.chance(52):
@@ -566,23 +572,15 @@ class Robot_tactic(Robot_meta):
         dices = self.dices_for_pick
         singles = dices.count(1) + dices.count(5)
 
-        # Если есть диапазон костей, то забираем его
         if t.check_combos_range(dices):
             self.take_range()
-            # Если остались еще кости, то забираем их
             if t.check_combos_single(dices):
                 self.take_single()
 
-        # Если есть ряд костей, то забрать весь (все) ряд(ы)
         elif t.check_combos_row(dices):
             self.take_row()
-            # Если еще остались единичные кости
-            if t.check_combos_single(dices):
-                # Забирам их при условии, что всего косей меньше трех
-                # (+ шанс 60%) или с шансом 25%.
-                if (len(dices) < 3 and t.chance(60)
-                        or t.chance(25)):
-                    self.take_single()
+            if t.check_combos_single(dices) and t.chance(25):
+                self.take_single()
 
         # Забирам все единичные кости, если остались только они
         elif singles == len(dices):
@@ -608,6 +606,7 @@ class Robot_tactic(Robot_meta):
             if (possible_points + self.score_pick + self.score_turn
                + self.score_total > gm.high_bar):
                 self.take_single()
+        # Забираем единичные кости, если таковые остались и принесут победу
 
         if self.thinking is True:
             delay = (r.uniform(0.7, 1.5) + len(dices) / 10) * -1
@@ -629,12 +628,8 @@ class Robot_tactic(Robot_meta):
 
         dices = Player.gm.dices
         chance_to_continue = chance_curve(self.score_turn)
-        # После вычисления шанса по формуле, рассматриваются нюансы, увеличива-
-        # ющие или уменьшающие риск потерять накопленные очки. Они увеличивают,
-        # либо уменьшают шанс продолжить ход:
 
-        # Если текущее кол-во очнов больше кол-ва очков для победы, то
-        # продолжать ход и рисковать не имеет смысла.
+        # Нюансы, увеличивающие или уменьшающие шанс продолжить ход
         if (self.score_total + self.score_turn
            + self.score_pick >= Player.gm.high_bar):
             chance_to_continue = 0
