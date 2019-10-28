@@ -23,7 +23,7 @@ def run(gm, screen):
         gbt.main(gm)
 
     # Действия при победе/поражении
-    winner = gm.player.__type__
+    winner = gm.player.type
     if winner == "Human":
         screen.display_msg("1_win1", data.PLAYER_NAME)
         screen.display_msg("1_win2")

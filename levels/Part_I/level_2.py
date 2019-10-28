@@ -24,7 +24,7 @@ def run(gm, screen):
         gbt.main(gm)
 
     # Действия при победе/поражении
-    winner = gm.player.__type__
+    winner = gm.player.type
     if winner == "Human":
         screen.display_msg_seq("2_win_seq")
         data.Game_Progress["level_2"]["is_complete"] = True

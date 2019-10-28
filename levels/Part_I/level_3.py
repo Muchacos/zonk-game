@@ -18,11 +18,10 @@ def run(gm, screen):
     screen.add_high_bar(hbar)
 
     # Показ вводного сообщения
-    if data.Game_Progress["level_3"]["losses"] == 0:
-        screen.display_msg_seq("3_welcomelvl_seq")
+    screen.display_msg_seq("3_welcomelvl_seq")
 
     # Цикл игры, идущий до тех пор, пока игрок не наберет hbar - 500 очков
-    while gm.player.__type__ == "Robot" or gm.player.score_total < hbar - 500:
+    while gm.player.type == "Robot" or gm.player.score_total < hbar - 500:
         gbt.main(gm, new_dfh=new_dfh, new_dfr=new_dfr)
 
     # Кости, которые будут далее выпадать игроку
@@ -35,13 +34,13 @@ def run(gm, screen):
     i = 0
 
     # Цикл, идущий до тех пор, пока игрок не закончит ход, взяв особые кости
-    while (gm.player.__type__ == "Human" or
+    while (gm.player.type == "Human" or
            gm.second_player.score_total < hbar - 300):
         if i == 3:
             special_dices[i] = tls.cheat_bad_dices(1)
         gbt.main(gm, new_dfh=special_dices[i].copy())
 
-        if gm.player.__type__ == "Human" and gm.player.score_turn != 0:
+        if gm.player.type == "Human" and gm.player.score_turn != 0:
             i += 1
         else:
             i = 0
