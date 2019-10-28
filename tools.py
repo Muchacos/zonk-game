@@ -18,30 +18,30 @@ def chance(chance):
 
 def exclude_array(base, exclusion):
     """Возвращает массив base, исключая из него массив exclusion."""
-    out = base[:]
+    out = base.copy()
     for ex in exclusion:
         out.remove(ex)
     return out
 
 
-def check_combos_row(dices):
+def has_rowcombo(dices):
     """Возвращает True, если среди костей есть >= три одинаковых кости."""
     return any(dices.count(d) >= 3 for d in dices)
 
 
-def check_combos_range(dices):
+def has_rangecombo(dices):
     """Возвращает True, если среди костей есть все кости от 1 до 5."""
     return all(d in dices for d in range(1, 6))
 
 
-def check_combos_single(dices):
+def has_singlecombo(dices):
     """Возвращает True, если среди костей есть кость 1 или 5."""
     return any(d in dices for d in (1, 5))
 
 
-def check_combos_any(dices):
+def has_anycombo(dices):
     """Возвращает True, если среди костей есть хотя бы одна комбинация."""
-    return any([check_combos_row(dices), check_combos_single(dices)])
+    return has_singlecombo(dices) or has_rowcombo(dices)
 
 
 def rand_dices(amount_of_dices):
@@ -49,7 +49,7 @@ def rand_dices(amount_of_dices):
     return [r.randint(1, 6) for i in range(amount_of_dices)]
 
 
-def cheat_good_dices(amount_of_dices, *, clear=None):
+def good_dices(n_dices, *, clear=None):
     """Возвращает хорошие кости (непроигрышные или все, приносящие очки)."""
     if clear is None:
         if chance(r.randint(10, 60)):
@@ -57,25 +57,25 @@ def cheat_good_dices(amount_of_dices, *, clear=None):
         else:
             clear = False
 
-    if clear is True or amount_of_dices == 1:
-        possible_dices = data.DICES_CLEAR_COMBOS[amount_of_dices]
-        return r.choice(possible_dices)
+    if clear or n_dices == 1:
+        dices_list = data.DICES_CLEAR_COMBOS[n_dices]
+        return r.choice(dices_list)
     else:
         while True:
-            result = [r.randint(1, 6) for i in range(amount_of_dices)]
-            if (check_combos_any(result) is True and
-               result not in data.DICES_CLEAR_COMBOS[amount_of_dices]):
-                return result
+            dices = rand_dices(n_dices)
+            if (has_anycombo(dices) and
+               dices not in data.DICES_CLEAR_COMBOS[n_dices]):
+                return dices
 
 
-def cheat_bad_dices(amount_of_dices, onefive=False):
+def bad_dices(n_dices, *, onefive=False):
     """Возвращает только плохие кости (либо одну пятерку)."""
     while True:
-        result = [r.choice([2, 3, 4, 6]) for i in range(amount_of_dices)]
-        if check_combos_any(result) is False:
-            if onefive is True and len(result) != 1:
-                result[0] = 5
-            return result
+        dices = [r.choice([2, 3, 4, 6]) for i in range(n_dices)]
+        if has_anycombo(dices) is False:
+            if onefive and n_dices != 1:
+                dices[0] = 5
+            return dices
 
 
 def dices_info(dices):
@@ -83,7 +83,7 @@ def dices_info(dices):
     score = 0
     dices = dices.copy()
 
-    if check_combos_range(dices):
+    if has_rangecombo(dices):
         if 6 in dices:
             score += 1500
             dices.clear()
@@ -92,8 +92,8 @@ def dices_info(dices):
             for d in range(1, 6):
                 dices.remove(d)
 
-    if check_combos_row(dices):
         for dice in dices[:]:
+    if has_rowcombo(dices):
             loc_score = 0
             row_len = dices.count(dice)
 
@@ -108,7 +108,7 @@ def dices_info(dices):
                 for i in range(row_len):
                     dices.remove(dice)
 
-    if check_combos_single(dices):
+    if has_singlecombo(dices):
         for dice in dices[:]:
             if dice == 1:
                 score += 100

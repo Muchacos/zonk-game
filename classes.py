@@ -36,6 +36,7 @@ class Game:
     check_win -- проверяет, выйграл ли игрок
     set_settings -- устанавливает игроков и high_bar
     switch_player -- меняет игроков местами
+    restore_dices -- возвращает недостающие кости
 
     """
 
@@ -64,7 +65,7 @@ class Game:
             return True
         return False
 
-    def add_dices(self):
+    def restore_dices(self):
         self.dices.extend([1] * (6 - len(self.dices)))
 
 #
@@ -99,48 +100,48 @@ class Game:
             self.dices = robot_diceroll_func(n_dices)
         dice_display_func(dices)
 
-        if not t.check_combos_any(dices):
-            screen.display_msg("a_nocombos")  # FIXME
-            screen.clear_zone(screen.ZONE_DICES)  # уточнить
+        if not t.has_anycombo(dices):
+            scr.display_msg("a_nocombos")  # FIXME
+            scr.clear_zone(scr.ZONE_DICES)
             player.clear_scoreturn()
-            self.add_dices()
+            self.restore_dices()
             self.switch_player()
             return 0
 
-        action_choice = data.KEYCODES["TURN_CANCEL"]
-        while action_choice == data.KEYCODES["TURN_CANCEL"]:
             pick_choice_display_func()
+        act_choice = data.KEYCODES["TURN_CANCEL"]
+        while act_choice == data.KEYCODES["TURN_CANCEL"]:
             pick = player.get_pick()
             pick_score, pick_bad_dices = t.dices_info(pick).values()
             pick_good_dices = t.exclude_array(pick, pick_bad_dices)
 
             if pick_score == 0:
-                screen.effect_hldices(pick, cp=4)
-                screen.display_msg("a_badallpick", player.name)  # FIXME
-                screen.effect_hldices()
+                scr.effect_hldices(pick, cp=4)
+                scr.display_msg("a_badallpick", player.name)  # FIXME
+                scr.effect_hldices()
                 continue
 
-            player.add_scorepick(pick_score)  # уточнить нижнее
-            screen.effect_hldices(pick_good_dices)
-            if pick_bad_dices is True:
-                screen.effect_hldices(pick_bad_dices, cp=4)
-                screen.display_msg("a_badpick")  # FIXME
+            player.add_scorepick(pick_score)
+            scr.effect_hldices(pick_good_dices)
+            if pick_bad_dices:
+                scr.effect_hldices(pick_bad_dices, cp=4)
+                scr.display_msg("a_badpick")  # FIXME
 
             action_choice_display_func()
-            action_choice = player.get_action_choice()
-            screen.effect_hldices()
+            act_choice = player.get_actchoice()
+            scr.effect_hldices()
 
         self.dices = t.exclude_array(dices, pick_good_dices)
-        screen.effect_hldices(pick_good_dices, cp=2)
+        scr.effect_hldices(pick_good_dices, cp=2)
         player.add_scoreturn()
-        screen.display_msg("a_scrpick", player.name, pick_score)  # FIXME
+        scr.display_msg("a_scrpick", player.name, pick_score)  # FIXME
 
-        if action_choice == data.KEYCODES["TURN_END"]:
+        if act_choice == data.KEYCODES["TURN_END"]:
             player.add_scoretotal()
             # FIXME
-            screen.display_msg("a_scrtotl", player.name, player.score_total)
-            screen.clear_zone(screen.ZONE_DICES)
-            self.add_dices()
+            scr.display_msg("a_scrtotl", player.name, player.score_total)
+            scr.clear_zone(scr.ZONE_DICES)
+            self.restore_dices()
             self.switch_player()
         elif len(dices) == 0:
             self.add_dices()
@@ -158,7 +159,7 @@ class Game:
 
     def nocombos_managing(self):
         """Делает что-то, если кости не приносят очков."""
-        if t.check_combos_any(self.dices) is False:
+        if t.has_anycombo(self.dices) is False:
             Game.screen.display_msg("a_nocombos")
             self.player.clear_scoreturn()
             return False
@@ -177,7 +178,7 @@ class Game:
         # и из основного списка костей класса Game (но возвращаются из
         # temp_dices, в случае повторного выбора).
 
-        if t.check_combos_range(hand):
+        if t.has_rangecombo(hand):
             if 6 in hand:
                 pick_score += 1500
                 hand.clear()
@@ -188,7 +189,7 @@ class Game:
                     hand.remove(i)
                     self.dices.remove(i)
 
-        if t.check_combos_row(hand):
+        if t.has_rowcombo(hand):
             for dice in hand[:]:
                 score = 0
                 row_len = hand.count(dice)
@@ -205,7 +206,7 @@ class Game:
                         hand.remove(dice)
                         self.dices.remove(dice)
 
-        if t.check_combos_single(hand):
+        if t.has_singlecombo(hand):
             for dice in hand[:]:
 
                 if dice == 1:
@@ -345,7 +346,7 @@ class Player:
 class Human(Player):
     """Представляет игрока по ту сторону экрана."""
 
-    __type__ = "Human"
+    type = "Human"
 
     def get_dicechoose(self):
         dices = Player.gm.dices
@@ -396,7 +397,7 @@ class Robot_meta(Player):
 
     """
 
-    __type__ = "Robot"
+    type = "Robot"
 
     def __init__(self, game_mode, screen, name, thinking=False):
         Player.__init__(self, game_mode, screen, name)
@@ -449,7 +450,7 @@ class Robot_meta(Player):
         return out
 
 
-class Robot_r(Robot_meta):
+class Robot_random(Robot_meta):
     """Представляет робота, полагающегося на случайность."""
 
     def get_dicechoose(self):
@@ -459,7 +460,7 @@ class Robot_r(Robot_meta):
         dices = self.dices_for_pick
         ones, fives = dices.count(1), dices.count(5)
 
-        if t.check_combos_range(dices):
+        if t.has_rangecombo(dices):
             if t.chance(37):
                 self.take_range()
                 if ones + fives > 2 and t.chance(40):
@@ -469,7 +470,7 @@ class Robot_r(Robot_meta):
             else:
                 self.take_single(r.choice([1, 2]))
 
-        elif t.check_combos_row(dices):
+        elif t.has_rowcombo(dices):
             # Если костей два ряда, то забираем оба с шансом 90%
             if len(self.rowcombo_dice()) > 1 and t.chance(90):
                 self.take_row()
@@ -490,7 +491,7 @@ class Robot_r(Robot_meta):
                     self.take_row()
 
         # Если остались единичные и мы брали кости
-        if t.check_combos_single(dices) and len(self.claw) != 0:
+        if t.has_singlecombo(dices) and len(self.claw) != 0:
             # Если все оставшиеся кости - единичные
             if len(dices) == ones + fives:
                 if t.chance(84):  # То берем их все с шансом 84%
@@ -572,14 +573,14 @@ class Robot_tactic(Robot_meta):
         dices = self.dices_for_pick
         singles = dices.count(1) + dices.count(5)
 
-        if t.check_combos_range(dices):
+        if t.has_rangecombo(dices):
             self.take_range()
-            if t.check_combos_single(dices):
+            if t.has_singlecombo(dices):
                 self.take_single()
 
-        elif t.check_combos_row(dices):
+        elif t.has_rowcombo(dices):
             self.take_row()
-            if t.check_combos_single(dices) and t.chance(25):
+            if t.has_singlecombo(dices) and t.chance(25):
                 self.take_single()
 
         # Забирам все единичные кости, если остались только они

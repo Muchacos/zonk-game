@@ -562,12 +562,12 @@ class Screen:
         ZONE_SCORE = Screen.ZONE_SCORE
         p1, p2 = game_mode.player, game_mode.second_player
 
-        if p1.__type__ == "Human":
+        if p1.type == "Human":
             stdscr.addstr(ZONE_SCORE[0] + 1, ZONE_SCORE[1] + 5,
                           p1.name, curses.color_pair(5))
             stdscr.addstr(ZONE_SCORE[0] + 1, ZONE_SCORE[1] + 14,
                           p2.name, curses.color_pair(0))
-        elif p1.__type__ == "Robot":
+        elif p1.type == "Robot":
             stdscr.addstr(ZONE_SCORE[0] + 1, ZONE_SCORE[1] + 14,
                           p1.name, curses.color_pair(5))
             stdscr.addstr(ZONE_SCORE[0] + 1, ZONE_SCORE[1] + 5,
