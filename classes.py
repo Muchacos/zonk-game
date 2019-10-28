@@ -31,13 +31,6 @@ class Game:
     game_flag -- булевая переменная, указывающаяя может ли продолжаться игра
     second_player -- второй (предыдущий/следующий) игрок
 
-    Методы:
-    action -- функция, представляющая основное игровое событие
-    check_win -- проверяет, выйграл ли игрок
-    set_settings -- устанавливает игроков и high_bar
-    switch_player -- меняет игроков местами
-    restore_dices -- возвращает недостающие кости
-
     """
 
     screen = None
@@ -49,20 +42,24 @@ class Game:
         self.temp_dices = []
 
     def set_settings(self, high_bar, player, enemy):
+        """Устанавливает игроков и high_bar."""
         self.player = player
         self.high_bar = high_bar
         self.second_player = enemy
 
     def switch_player(self):
+        """Меняет игроков местами."""
         self.player, self.second_player = self.second_player, self.player
         Game.screen.anim_playerhl(self)
         Game.screen.display_msg("a_whoturn", self.player.name,
                                 delay=data.TIMINGS["DELAY-FST"])
 
     def check_win(self):
+        """Возвращает True, если игрок выйграл."""
         return self.player.score_total >= self.high_bar
 
     def restore_dices(self):
+        """Добавляет недостающие кости."""
         self.dices.extend([1] * (6 - len(self.dices)))
 
 #
@@ -76,6 +73,7 @@ class Game:
 #        "Y888888   "Y8888P   "Y888  888   "Y88P"   888  888
 
     def action(self, *, embed_funcs):
+        """Производит основное игровое событие."""
         def run_embed(key, *args, **kwargs):
             embed_funcs[key](*args, **kwargs)
 
@@ -147,135 +145,6 @@ class Game:
                 self.restore_dices()
 
 
-'''
-    def remdis_dices(self, dices):
-        """Записывает в game_mode и отображает переданные кости."""
-        screen = self.screen
-        self.dices = dices
-        self.temp_dices = dices[:]
-        screen.anim_diceroll(len(dices))
-        screen.display_dices(dices)
-
-    def nocombos_managing(self):
-        """Делает что-то, если кости не приносят очков."""
-        if t.has_anycombo(self.dices) is False:
-            Game.screen.display_msg("a_nocombos")
-            self.player.clear_scoreturn()
-            return False
-        return True
-
-    def get_pick(self, *, raise_bad_pick=True, raise_bad_all_pick=True):
-        """Получает выбранне игроком кости и выводит очки за них."""
-        screen = self.screen
-        player = self.player
-        pick_score = 0
-        # ИИ/Человек берет в "руку" какие-то выпавшие кости
-        hand = player.get_dicechoose()
-        screen.effect_hldices(hand)  # выделение выбранных костей
-        # Происходят проверки на комбинации в руке, приносящие очки (поря-
-        # док имеет значение!). Кости, приносящие очки, удаляются из руки
-        # и из основного списка костей класса Game (но возвращаются из
-        # temp_dices, в случае повторного выбора).
-
-        if t.has_rangecombo(hand):
-            if 6 in hand:
-                pick_score += 1500
-                hand.clear()
-                self.dices.clear()
-            else:
-                pick_score += 750
-                for i in range(1, 6):
-                    hand.remove(i)
-                    self.dices.remove(i)
-
-        if t.has_rowcombo(hand):
-            for dice in hand[:]:
-                score = 0
-                row_len = hand.count(dice)
-
-                if row_len >= 3:
-                    if dice == 1:
-                        score += 1000
-                    else:
-                        score += dice * 100
-                    score *= (row_len - 2)
-                    pick_score += score
-
-                    for i in range(row_len):
-                        hand.remove(dice)
-                        self.dices.remove(dice)
-
-        if t.has_singlecombo(hand):
-            for dice in hand[:]:
-
-                if dice == 1:
-                    pick_score += 100
-                    hand.remove(dice)
-                    self.dices.remove(dice)
-
-                elif dice == 5:
-                    pick_score += 50
-                    hand.remove(dice)
-                    self.dices.remove(dice)
-
-        # Выводится сообщение, если никакие кости не принесли очков.
-        # Цикл тут же начинается сначала.
-        if pick_score == 0:
-            if raise_bad_all_pick:
-                screen.effect_hldices(hand, cp=4)
-                screen.display_msg("a_badallpick", player.name)
-                screen.effect_hldices()
-            return pick_score
-        # Выводится сообщение, если в руке остались кости, которые не при-
-        # несли очки (но они используются далее в игре).
-        elif len(hand) > 0 and raise_bad_pick:
-            screen.effect_hldices(hand, cp=4)
-            screen.display_msg("a_badpick")
-
-        # Добавление очков за выбранные кости
-        player.add_scorepick(pick_score)
-        return pick_score
-
-    def get_action_choice(self, *, auto_managing=True):
-        """Возвращает то, что хочет сделать игрок далее."""
-        player = self.player
-        screen = self.screen
-        temp_dices = self.temp_dices
-
-        action_choice = player.get_nextaction()
-        screen.effect_hldices()
-
-        if auto_managing:
-            # При отмене выбора, цикл продолжается
-            if action_choice == data.KEYCODES["TURN_CANCEL"]:
-                self.dices = temp_dices[:]  # возвращение удаленных костей
-                player.clear_scorepick()
-            # Если игрок согласен использовать выбранные кости,
-            # то они скрываются.
-            else:
-                removed_dices = t.exclude_array(temp_dices, self.dices)
-                screen.effect_hldices(removed_dices, cp=2)
-
-        return action_choice
-
-    def add_scores(self, pick_score, action_choice, *, auto_msg=True):
-        """Занимается добавлением очков."""
-        player = self.player
-        screen = self.screen
-
-        player.add_scoreturn()
-        if auto_msg:
-            screen.display_msg("a_scrpick", player.name, pick_score)
-
-        # Если игрок хочет закончить ход и сохнанить набранные очки:
-        if action_choice == data.KEYCODES["TURN_END"]:
-            # Убираем оставшиеся кости. Новый игрок - чистый стол
-            screen.effect_hldices(screen.scr_dices, cp=2)
-            player.add_scoretotal()
-            if auto_msg:
-                screen.display_msg("a_scrtotl", player.name,
-                                   player.score_total)
-'''
 #  8888888b.   888             d8888  Y88b   d88P  8888888888  8888888b.
 #  888   Y88b  888            d88888   Y88b d88P   888         888   Y88b
 #  888    888  888           d88P888    Y88o88P    888         888    888
@@ -284,7 +153,6 @@ class Game:
 #  888         888        d88P   888      888      888         888 T88b
 #  888         888       d8888888888      888      888         888  T88b
 #  888         88888888 d88P     888      888      8888888888  888   T88b
-
 
 class Player:
     """Представляет родительский класс игрока.
@@ -341,7 +209,6 @@ class Player:
 #  888    888  Y88b. .d88P  888   "   888   d8888888888  888   Y8888
 #  888    888   "Y88888P"   888       888  d88P     888  888    Y888
 
-
 class Human(Player):
     """Представляет игрока по ту сторону экрана."""
 
@@ -381,7 +248,7 @@ class Human(Player):
 #  888  T88b   Y88b. .d88P  888   d88P  Y88b. .d88P     888
 #  888   T88b   "Y88888P"   8888888P"    "Y88888P"      888
 
-class Robot_meta(Player):
+class RobotMeta(Player):
     """Представляет базовый класс Роботов.
 
     Поля:
@@ -447,7 +314,7 @@ class Robot_meta(Player):
         return out
 
 
-class Robot_random(Robot_meta):
+class RobotRandom(RobotMeta):
     """Представляет робота, полагающегося на случайность."""
 
     def get_dicechoose(self):
@@ -557,7 +424,7 @@ class Robot_random(Robot_meta):
             return data.KEYCODES["TURN_END"]
 
 
-class Robot_tactic(Robot_meta):
+class RobotTactic(RobotMeta):
     """Представляет робота-тактика."""
 
     def get_dicechoose(self):
@@ -607,7 +474,6 @@ class Robot_tactic(Robot_meta):
         return self.claw
 
     def get_nextaction(self):
-
         def chance_curve(x):
             """Возвращает шанс продолжить ход, вычисляемый функцией 'y'."""
             # x - кол-во очков, y - шанс
