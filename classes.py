@@ -60,10 +60,7 @@ class Game:
                                 delay=data.TIMINGS["DELAY-FST"])
 
     def check_win(self):
-        if self.player.score_total >= self.high_bar:
-            self.game_flag = False
-            return True
-        return False
+        return self.player.score_total >= self.high_bar
 
     def restore_dices(self):
         self.dices.extend([1] * (6 - len(self.dices)))
@@ -78,27 +75,22 @@ class Game:
 #        888  888  Y88b.     Y88b.   888  Y88..88P  888  888
 #        "Y888888   "Y8888P   "Y888  888   "Y88P"   888  888
 
-    def action(
-               self, *,
-               human_diceroll_func,
-               robot_diceroll_func,
-               anim_diceroll_func,
-               dice_display_func,
-               pick_choice_display_func,
-               action_choice_display_func,
-    ):
-        dices = self.dices
-        player = self.player
-        screen = self.screen
-        is_human = player.__type__ == "Human"
-        n_dices = len(dices)
+    def action(self, *, embed_funcs):
+        def run_embed(key, *args, **kwargs):
+            embed_funcs[key](*args, **kwargs)
 
-        anim_diceroll_func(n_dices)
+        scr = self.screen
+        dices = self.dices
+        n_dices = len(dices)
+        player = self.player
+        is_human = player.type == "Human"
+
+        run_embed("anim_diceroll", n_dices)
         if is_human:
-            self.dices = human_diceroll_func(n_dices)
+            self.dices = run_embed("get_human_dices", n_dices)
         else:
-            self.dices = robot_diceroll_func(n_dices)
-        dice_display_func(dices)
+            self.dices = run_embed("get_robot_dices", n_dices)
+        run_embed("display_dices")(dices)
 
         if not t.has_anycombo(dices):
             scr.display_msg("a_nocombos")  # FIXME
@@ -108,9 +100,9 @@ class Game:
             self.switch_player()
             return 0
 
-            pick_choice_display_func()
         act_choice = data.KEYCODES["TURN_CANCEL"]
         while act_choice == data.KEYCODES["TURN_CANCEL"]:
+            run_embed("display_pick_choose")
             pick = player.get_pick()
             pick_score, pick_bad_dices = t.dices_info(pick).values()
             pick_good_dices = t.exclude_array(pick, pick_bad_dices)
@@ -127,7 +119,7 @@ class Game:
                 scr.effect_hldices(pick_bad_dices, cp=4)
                 scr.display_msg("a_badpick")  # FIXME
 
-            action_choice_display_func()
+            run_embed("display_act_choice")
             act_choice = player.get_actchoice()
             scr.effect_hldices()
 
@@ -137,15 +129,22 @@ class Game:
         scr.display_msg("a_scrpick", player.name, pick_score)  # FIXME
 
         if act_choice == data.KEYCODES["TURN_END"]:
+            if not is_human:
+                scr.display_msg("a_robturnF")
             player.add_scoretotal()
             # FIXME
             scr.display_msg("a_scrtotl", player.name, player.score_total)
             scr.clear_zone(scr.ZONE_DICES)
+            if self.check_win():
+                self.game_flag = False
+                return 0
             self.restore_dices()
             self.switch_player()
-        elif len(dices) == 0:
-            self.add_dices()
-        return 0
+        else:
+            if not is_human:
+                scr.display_msg("a_robturnT")
+            if len(dices) == 0:
+                self.restore_dices()
 
 
 '''
@@ -355,8 +354,8 @@ class Human(Player):
             screen.display_msg("a_getpick", wait=False)
             inp = screen.input_str()
             # Проверка, есть ли все выбранные кости среди выпавших костей
-            if (inp.isdigit()
-                    and all(inp.count(d) <= dices.count(int(d)) for d in inp)):
+            if (inp.isdigit() and
+               all(inp.count(d) <= dices.count(int(d)) for d in inp)):
                 return [int(d) for d in inp]
             else:
                 screen.display_msg("a_errpick",
@@ -367,12 +366,10 @@ class Human(Player):
         while True:
             screen.display_msg("a_actchoose", wait=False, speedup=2)
             inp = screen.input_str()
-
             if inp in data.KEYCODES.values():
                 return inp
             else:
-                screen.display_msg("a_badans",
-                                   delay=data.TIMINGS["DELAY-ERR"])
+                screen.display_msg("a_badans", delay=data.TIMINGS["DELAY-ERR"])
 
 
 #  8888888b.    .d88888b.   888888b.     .d88888b.  88888888888
@@ -455,8 +452,8 @@ class Robot_random(Robot_meta):
 
     def get_dicechoose(self):
         gm = Player.gm
-        self.dices_for_pick = gm.dices[:]
         self.claw = []
+        self.dices_for_pick = gm.dices[:]
         dices = self.dices_for_pick
         ones, fives = dices.count(1), dices.count(5)
 
@@ -479,14 +476,12 @@ class Robot_random(Robot_meta):
                 # Вместо ряда забираем единичные кости, если ряд состоит из них
                 if ((row_dice == 1 and fives != 0 and t.chance(36))
                    or (row_dice == 5 and ones != 0 and t.chance(40))):
-                    self.take_single()
+                    self.take_single(2)
                 elif row_dice not in (1, 5):
+                    self.take_row()
                     # Забираем ещи и единичные с шансом 40%
                     if ones + fives > 0 and t.chance(40):
                         self.take_single()
-                        self.take_row()
-                    else:
-                        self.take_row()
                 else:
                     self.take_row()
 
@@ -527,15 +522,16 @@ class Robot_random(Robot_meta):
     def get_nextaction(self):
         gm = Player.gm
         dices = gm.dices
+        n_dices = len(dices)
         chance_to_continue = 0
 
-        if len(dices) == 0:
+        if n_dices == 0:
             chance_to_continue = 93
-        elif len(dices) in (4, 5):
+        elif n_dices in (4, 5):
             chance_to_continue = r.randint(70, 90)
-        elif len(dices) == 3:
+        elif n_dices == 3:
             chance_to_continue = r.randint(60, 70)
-        elif len(dices) == 2:
+        elif n_dices == 2:
             chance_to_continue = r.randint(20, 50)
         else:
             chance_to_continue = r.randint(10, 30)
@@ -556,10 +552,8 @@ class Robot_random(Robot_meta):
 
         choice = t.chance(chance_to_continue)
         if choice is True:
-            Player.screen.display_msg("a_robturnT")
             return data.KEYCODES["TURN_CONTINUE"]
         else:
-            Player.screen.display_msg("a_robturnF")
             return data.KEYCODES["TURN_END"]
 
 
@@ -601,13 +595,11 @@ class Robot_tactic(Robot_meta):
             else:
                 self.take_single(1)
 
-        new_ones, new_fives = dices.count(1), dices.count(5)
-        if new_ones + new_fives > 0:
-            possible_points = new_ones * 100 + new_fives * 50
-            if (possible_points + self.score_pick + self.score_turn
-               + self.score_total > gm.high_bar):
-                self.take_single()
         # Забираем единичные кости, если таковые остались и принесут победу
+        possible_points = t.dices_info(dices)["score"]
+        if (t.has_singlecombo(dices) and possible_points +
+           self.score_turn + self.score_total >= gm.high_bar):
+            self.take_single()
 
         if self.thinking is True:
             delay = (r.uniform(0.7, 1.5) + len(dices) / 10) * -1
@@ -628,23 +620,22 @@ class Robot_tactic(Robot_meta):
             return y
 
         dices = Player.gm.dices
+        n_dices = len(dices)
         chance_to_continue = chance_curve(self.score_turn)
 
         # Нюансы, увеличивающие или уменьшающие шанс продолжить ход
         if (self.score_total + self.score_turn
            + self.score_pick >= Player.gm.high_bar):
             chance_to_continue = 0
-        elif len(dices) == 0:
+        elif n_dices == 0:
             chance_to_continue += 90
-        elif len(dices) == 5:
+        elif n_dices == 5:
             chance_to_continue += 30
-        elif len(dices) < 3:
+        elif n_dices < 3:
             chance_to_continue -= 30
 
         choice = t.chance(chance_to_continue)
         if choice is True:
-            Player.screen.display_msg("a_robturnT")
             return data.KEYCODES["TURN_CONTINUE"]
         else:
-            Player.screen.display_msg("a_robturnF")
             return data.KEYCODES["TURN_END"]

@@ -298,18 +298,18 @@ class Screen:
                         continue
 
                 # Печать слова с анимацией или без нее
-                if with_animation is True:
+                if with_animation:
                     result = self.anim_percharword(word, ch_print_delay,
                                                    can_skip)
-                    if result != 0:
-                        return -1
+                    if result == "interrupted":
+                        return result
                 else:
                     stdscr.addstr(word + " ")
                 fill += len(word) + 1  # увеличение заполненности строки
+            return "complete"
 
-            return 0
         result = printing_with_animation(True)
-        if result != 0:
+        if result == "interrupted":
             printing_with_animation(False)
 
         # Если необходимо ждать, пока игрок прочитает сообщение, то после
@@ -457,7 +457,7 @@ class Screen:
         curr_cp, next_cp = 0, 6
         interrupt = False
 
-        while interrupt is False:
+        while not interrupt:
             stdscr.addstr(y, x, "▼", curses.color_pair(curr_cp))
             interrupt = self.input_delayinterrupt(0.8)
             curr_cp, next_cp = next_cp, curr_cp
@@ -475,10 +475,10 @@ class Screen:
             # Если игрок нажал кнопку и можно пропустить анимацию
             if stdscr.getch() != -1 and can_skip:
                 stdscr.timeout(-1)
-                return -1
+                return "interrupted"
             time.sleep(ch_print_delay)
         stdscr.timeout(-1)
-        return 0
+        return "complete"
 
     def anim_ending(self):
         stdscr = self.stdscr
@@ -626,11 +626,11 @@ class Screen:
     def msg_display_attroff(self, *, delay=False, wait=False, speedup=False):
         settings = self.msg_display_settings
         std_settings = data.MSG_DISPLAY_DEFAULT_SETTINGS
-        if delay is True:
+        if delay:
             settings["delay"] = std_settings["delay"]
-        if wait is True:
+        if wait:
             settings["wait"] = std_settings["wait"]
-        if speedup is True:
+        if speedup:
             settings["speedup"] = std_settings["speedup"]
 
     def beep(self):

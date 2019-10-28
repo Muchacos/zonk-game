@@ -52,10 +52,7 @@ def rand_dices(amount_of_dices):
 def good_dices(n_dices, *, clear=None):
     """Возвращает хорошие кости (непроигрышные или все, приносящие очки)."""
     if clear is None:
-        if chance(r.randint(10, 60)):
-            clear = True
-        else:
-            clear = False
+        clear = chance(r.randint(10, 60))
 
     if clear or n_dices == 1:
         dices_list = data.DICES_CLEAR_COMBOS[n_dices]
@@ -92,8 +89,8 @@ def dices_info(dices):
             for d in range(1, 6):
                 dices.remove(d)
 
-        for dice in dices[:]:
     if has_rowcombo(dices):
+        for dice in set(dices):
             loc_score = 0
             row_len = dices.count(dice)
 
@@ -104,7 +101,6 @@ def dices_info(dices):
                     loc_score += dice * 100
                 loc_score *= (row_len - 2)
                 score += loc_score
-
                 for i in range(row_len):
                     dices.remove(dice)
 
