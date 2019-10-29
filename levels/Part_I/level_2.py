@@ -1,36 +1,41 @@
 import classes
 import data
-from levels import game_base_turn as gbt
+import tools as t
+from Levels.Part_I import scripts as s
 
 
-def run(gm, screen):
-    # Установка игровых параметров
-    player = classes.Human(gm, screen, data.PLAYER_NAME)
-    enemy = classes.Robot_tactic(gm, screen, data.ROBOT_TACTIC_NAME)
+def run(gm):
+    scr = gm.screen
+    player = classes.Human(gm, scr, data.PLAYER_NAME)
+    enemy = classes.RobotTactic(gm, scr, data.ROBOT_RANDOM_NAME)
     hbar = data.HIGH_BARS["level_2"]
+    embed_funcs = {
+                   "anim_diceroll": scr.anim_diceroll,
+                   "get_human_dices": s.get_human_dices_lev12,
+                   "get_robot_dices": s.get_robot_dices_lev12,
+                   "display_dices": scr.display_dices,
+    }
 
     gm.set_settings(hbar, player, enemy)
-    screen.add_players(gm)
-    screen.add_high_bar(hbar)
+    scr.add_players(gm)
+    scr.add_high_bar(hbar)
 
-    # Показ вводного сообщения
-    if data.Game_Progress["level_2"]["losses"] == 0:
-        screen.display_msg_seq("2_welcomelvl_seq")
-        screen.display_msg("2_robotname", data.PLAYER_NAME,
-                           data.ROBOT_TACTIC_NAME)
+    if t.games_count("level_2") == 0:
+        scr.display_msg_seq("2_welcomelvl_seq")
+        scr.display_msg("2_robotname", data.PLAYER_NAME,
+                        data.ROBOT_TACTIC_NAME)
 
-    # Цикл игры уровня
     while gm.game_flag:
-        gbt.main(gm)
+        gm.action(embed_funcs=embed_funcs)
 
-    # Действия при победе/поражении
     winner = gm.player.type
     if winner == "Human":
-        screen.display_msg_seq("2_win_seq")
+        scr.display_msg_seq("2_win_seq")
         data.Game_Progress["level_2"]["is_complete"] = True
     else:
-        screen.display_msg_seq("2_loose_seq")
+        scr.display_msg_seq("2_loose_seq")
         data.Game_Progress["level_2"]["losses"] += 1
 
-    gm.add_dices()
-    screen.init_zones()
+    scr.add_zonescore()
+    scr.clear_zone(scr.ZONE_DICES)
+    scr.clear_zone(scr.ZONE_MSG)
