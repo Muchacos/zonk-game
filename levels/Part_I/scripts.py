@@ -44,16 +44,14 @@ def paint_interface(screen):
         time.sleep(0.3)
     time.sleep(0.9)
 
-    scoretxts = [" Tot _____    _____ ",
+    zonescore = [" Tot _____    _____ ",
                  " Tur _____    _____ ",
                  "     +        +     ",
                  " Win     _____      "]
-    idx = 0
-    for y in (3, 5, 6, 7):
-        stdscr.addstr(ZONE_SCORE[0] + y, ZONE_SCORE[1], scoretxts[idx])
+    for i, y in enumerate((3, 5, 6, 7)):
+        stdscr.addstr(ZONE_SCORE[0] + y, ZONE_SCORE[1], zonescore[i])
         stdscr.refresh()
         time.sleep(0.2)
-        idx += 1
 
     stdscr.addstr(ZONE_INPUT[0], ZONE_INPUT[1] - 1, ">")
     stdscr.attroff(curses.color_pair(1))

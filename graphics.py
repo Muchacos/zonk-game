@@ -494,6 +494,20 @@ class Screen:
         self.stdscr.addstr(ZONE_SCORE[0] + 7, ZONE_SCORE[1] + 9, str(hbar),
                            curses.A_UNDERLINE)
 
+    def add_zonescore(self):
+        """Отчищает и отрисовывает зону для очков."""
+        stdscr = self.stdscr
+        ZONE_SCORE = self.ZONE_SCORE
+
+        self.clear_zone(ZONE_SCORE)
+        zone_txt = [" Tot _____    _____ ",
+                    " Tur _____    _____ ",
+                    "     +        +     ",
+                    " Win     _____      "]
+        for i, y in enumerate((3, 5, 6, 7)):
+            stdscr.addstr(ZONE_SCORE[0] + y, ZONE_SCORE[1], zone_txt[i])
+        stdscr.refresh()
+
     def add_interface(self):
         """Мгновенно добавляет интерфейс на экран."""
         stdscr = self.stdscr
@@ -519,15 +533,7 @@ class Screen:
             stdscr.addstr(uy, rx - len(txt) - 2, txt)
             self.clear_zone(zone)
 
-        scoretxts = [" Tot _____    _____ ",
-                     " Tur _____    _____ ",
-                     "     +        +     ",
-                     " Win     _____      "]
-        idx = 0
-        for y in (3, 5, 6, 7):
-            stdscr.addstr(ZONE_SCORE[0] + y, ZONE_SCORE[1], scoretxts[idx])
-            idx += 1
-
+        self.add_zonescore()
         stdscr.addstr(ZONE_INPUT[0], ZONE_INPUT[1] - 1, ">")
         stdscr.attroff(curses.color_pair(1))
         stdscr.refresh()
