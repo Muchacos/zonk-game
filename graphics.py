@@ -426,53 +426,6 @@ class Screen:
             stdscr.refresh()
             time.sleep(0.04)
 
-    def anim_paintui(self):
-        """Постепенно прорисовывает интерфейс."""
-        stdscr = self.stdscr
-        SH, SW = Screen.SH, Screen.SW
-        ZONE_DICES = Screen.ZONE_DICES
-        ZONE_INPUT = Screen.ZONE_INPUT
-        ZONE_SCORE = Screen.ZONE_SCORE
-        ZONE_MSG = Screen.ZONE_MSG
-
-        for y in range(SH - 1):
-            stdscr.addstr(y, 0, "∙" * SW, curses.color_pair(2))
-            stdscr.refresh()
-            time.sleep(0.06)
-        time.sleep(0.75)
-
-        stdscr.attron(curses.color_pair(1))
-        for zone, txt in ([ZONE_DICES, "┤dices├"], [ZONE_SCORE, "┤score├"],
-                          [ZONE_INPUT, "┤input├"], [ZONE_MSG, "┤msg├"]):
-            uy, lx = zone[0] - 1, zone[1] - 1
-            ly, rx = zone[2] + 1, zone[3] + 1
-            textpad.rectangle(stdscr, uy, lx, ly, rx)
-            stdscr.addstr(uy, lx, "∙")
-            stdscr.addstr(uy, rx, "∙")
-            stdscr.addstr(ly, lx, "∙")
-            stdscr.addstr(ly, rx, "∙")
-            self.clear_zone(zone)
-            stdscr.addstr(uy, rx - len(txt) - 2, txt)
-            stdscr.refresh()
-            time.sleep(0.3)
-        time.sleep(0.9)
-
-        scoretxts = [" Tot _____    _____ ",
-                     " Tur _____    _____ ",
-                     "     +        +     ",
-                     " Win     _____      "]
-        idx = 0
-        for y in (3, 5, 6, 7):
-            stdscr.addstr(ZONE_SCORE[0] + y, ZONE_SCORE[1], scoretxts[idx])
-            stdscr.refresh()
-            time.sleep(0.2)
-            idx += 1
-
-        stdscr.addstr(ZONE_INPUT[0], ZONE_INPUT[1] - 1, ">")
-        stdscr.attroff(curses.color_pair(1))
-        stdscr.refresh()
-        time.sleep(0.7)
-
 #
 #                   .d888   .d888                     888
 #                  d88P"   d88P"                      888

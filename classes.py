@@ -79,15 +79,14 @@ class Game:
 
         scr = self.screen
         dices = self.dices
-        n_dices = len(dices)
         player = self.player
         is_human = player.type == "Human"
 
-        run_embed("anim_diceroll", n_dices)
+        run_embed("anim_diceroll", len(dices))
         if is_human:
-            self.dices = run_embed("get_human_dices", n_dices)
+            self.dices = run_embed("get_human_dices", self)
         else:
-            self.dices = run_embed("get_robot_dices", n_dices)
+            self.dices = run_embed("get_robot_dices", self)
         run_embed("display_dices")(dices)
 
         if not t.has_anycombo(dices):

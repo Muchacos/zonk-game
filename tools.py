@@ -115,3 +115,13 @@ def dices_info(dices):
                 dices.remove(dice)
 
     return {"score": score, "bad_dices": dices}
+
+
+def is_complete(level_key):
+    """Возвращает True, если уровень пройден."""
+    return data[level_key]["is_complete"]
+
+
+def games_count(level_key):
+    """Возвращает число игр на уровне"""
+    return data[level_key]["games"]

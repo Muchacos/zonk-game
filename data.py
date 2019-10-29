@@ -267,11 +267,11 @@ MSG_DISPLAY_DEFAULT_SETTINGS = {
 Game_Progress = {
     "level_1": {
         "is_complete": False,
-        "losses": 0,
+        "games": 0,
     },
     "level_2": {
         "is_complete": False,
-        "losses": 0,
+        "games": 0,
     },
     "level_3": {
         "is_complete": False,
