@@ -49,11 +49,8 @@ def rand_dices(amount_of_dices):
     return [r.randint(1, 6) for i in range(amount_of_dices)]
 
 
-def good_dices(n_dices, *, clear=None):
+def good_dices(n_dices, *, clear=False):
     """Возвращает хорошие кости (непроигрышные или все, приносящие очки)."""
-    if clear is None:
-        clear = chance(r.randint(10, 60))
-
     if clear or n_dices == 1:
         dices_list = data.DICES_CLEAR_COMBOS[n_dices]
         return r.choice(dices_list)
@@ -119,9 +116,9 @@ def dices_info(dices):
 
 def is_complete(level_key):
     """Возвращает True, если уровень пройден."""
-    return data[level_key]["is_complete"]
+    return data.Game_Progress[level_key]["is_complete"]
 
 
 def games_count(level_key):
     """Возвращает число игр на уровне"""
-    return data[level_key]["games"]
+    return data.Game_Progress[level_key]["games"]

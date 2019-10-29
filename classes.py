@@ -75,22 +75,21 @@ class Game:
     def action(self, *, embed_funcs):
         """Производит основное игровое событие."""
         def run_embed(key, *args, **kwargs):
-            embed_funcs[key](*args, **kwargs)
+            return embed_funcs[key](*args, **kwargs)
 
         scr = self.screen
-        dices = self.dices
         player = self.player
         is_human = player.type == "Human"
 
-        run_embed("anim_diceroll", len(dices))
+        run_embed("anim_diceroll", len(self.dices))
         if is_human:
             self.dices = run_embed("get_human_dices", self)
         else:
             self.dices = run_embed("get_robot_dices", self)
-        run_embed("display_dices")(dices)
+        run_embed("display_dices", self.dices)
 
-        if not t.has_anycombo(dices):
-            scr.display_msg("a_nocombos")  # FIXME
+        if not t.has_anycombo(self.dices):
+            scr.display_msg("a_nocombos")  # FIXME: нужен новый функционал
             scr.clear_zone(scr.ZONE_DICES)
             player.clear_scoreturn()
             self.restore_dices()
@@ -99,14 +98,16 @@ class Game:
 
         act_choice = data.KEYCODES["TURN_CANCEL"]
         while act_choice == data.KEYCODES["TURN_CANCEL"]:
-            run_embed("display_pick_choose")
-            pick = player.get_pick()
+            if is_human:
+                player.clear_scorepick()  # FIXME: вроде кривовато
+                scr.display_msg("a_getpick", wait=False)  # FIXME: см. выше
+            pick = player.get_dicechoose()
             pick_score, pick_bad_dices = t.dices_info(pick).values()
             pick_good_dices = t.exclude_array(pick, pick_bad_dices)
 
             if pick_score == 0:
                 scr.effect_hldices(pick, cp=4)
-                scr.display_msg("a_badallpick", player.name)  # FIXME
+                scr.display_msg("a_badallpick", player.name)  # FIXME: см. выше
                 scr.effect_hldices()
                 continue
 
@@ -114,34 +115,37 @@ class Game:
             scr.effect_hldices(pick_good_dices)
             if pick_bad_dices:
                 scr.effect_hldices(pick_bad_dices, cp=4)
-                scr.display_msg("a_badpick")  # FIXME
+                scr.display_msg("a_badpick")  # FIXME: см. выше
 
-            run_embed("display_act_choice")
+            if is_human:
+                # FIXME: см. выше
+                scr.display_msg("a_actchoose", wait=False, speedup=2)
             act_choice = player.get_actchoice()
+            if not is_human:  # FIXME: криво сделано
+                if act_choice == data.KEYCODES["TURN_END"]:
+                    scr.display_msg("a_robturnF")  # FIXME: см. выше
+                else:
+                    scr.display_msg("a_robturnT")  # FIXME: см. выше
             scr.effect_hldices()
 
-        self.dices = t.exclude_array(dices, pick_good_dices)
+        self.dices = t.exclude_array(self.dices, pick_good_dices)
         scr.effect_hldices(pick_good_dices, cp=2)
         player.add_scoreturn()
-        scr.display_msg("a_scrpick", player.name, pick_score)  # FIXME
+        scr.display_msg("a_scrpick", player.name, pick_score)  # FIXME: см.выше
 
         if act_choice == data.KEYCODES["TURN_END"]:
-            if not is_human:
-                scr.display_msg("a_robturnF")
             player.add_scoretotal()
-            # FIXME
+            # FIXME: см. выше
             scr.display_msg("a_scrtotl", player.name, player.score_total)
             scr.clear_zone(scr.ZONE_DICES)
             if self.check_win():
                 self.game_flag = False
+                self.restore_dices()
                 return 0
             self.restore_dices()
             self.switch_player()
-        else:
-            if not is_human:
-                scr.display_msg("a_robturnT")
-            if len(dices) == 0:
-                self.restore_dices()
+        elif len(self.dices) == 0:
+            self.restore_dices()
 
 
 #  8888888b.   888             d8888  Y88b   d88P  8888888888  8888888b.
@@ -217,20 +221,17 @@ class Human(Player):
         dices = Player.gm.dices
         screen = Player.screen
         while True:
-            screen.display_msg("a_getpick", wait=False)
             inp = screen.input_str()
             # Проверка, есть ли все выбранные кости среди выпавших костей
             if (inp.isdigit() and
                all(inp.count(d) <= dices.count(int(d)) for d in inp)):
                 return [int(d) for d in inp]
             else:
-                screen.display_msg("a_errpick",
-                                   delay=data.TIMINGS["DELAY-ERR"])
+                pass  # FIXME: нужно сделать вывод сообщения об ошибке
 
-    def get_nextaction(self):
+    def get_actchoice(self):
         screen = Player.screen
         while True:
-            screen.display_msg("a_actchoose", wait=False, speedup=2)
             inp = screen.input_str()
             if inp in data.KEYCODES.values():
                 return inp
@@ -385,7 +386,7 @@ class RobotRandom(RobotMeta):
             Player.screen.display_msg("a_robthink", delay=delay)
         return self.claw
 
-    def get_nextaction(self):
+    def get_actchoice(self):
         gm = Player.gm
         dices = gm.dices
         n_dices = len(dices)
@@ -472,7 +473,7 @@ class RobotTactic(RobotMeta):
             Player.screen.display_msg("a_robthink", delay=delay)
         return self.claw
 
-    def get_nextaction(self):
+    def get_actchoice(self):
         def chance_curve(x):
             """Возвращает шанс продолжить ход, вычисляемый функцией 'y'."""
             # x - кол-во очков, y - шанс

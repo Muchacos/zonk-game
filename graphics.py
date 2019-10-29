@@ -390,7 +390,7 @@ class Screen:
     def anim_arrowflick(self, y, x):
         """Проигрывает анимащию мигающей стрелки."""
         stdscr = self.stdscr
-        curr_cp, next_cp = 0, 6
+        curr_cp, next_cp = 0, 2
         interrupt = False
 
         while not interrupt:
