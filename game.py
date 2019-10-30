@@ -10,9 +10,8 @@ from Levels.Part_I import intro, level_1, level_2, level_3, unreliable_host
 screen = graphics.Screen()
 gm = classes.Game(screen)  # game_mode
 progress = data.Game_Progress
-args = sys.argv
+args = sys.argv  # аргументы определяют, с какого уровня начнется игра
 
-# Аргументы запуска. Определяют, с какого уровня начнется игра.
 if len(args) != 1:
     screen.add_interface()
     if args[1] == "-lvl2":
@@ -35,9 +34,6 @@ while True:
         break
     gm.game_flag = True
 
-# Запуск финальной (на данный момент) части
 unreliable_host.run(screen)
-
-# Конец игры
 screen.anim_ending()
 del screen
