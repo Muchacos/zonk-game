@@ -81,6 +81,17 @@ class Screen:
         curses.init_pair(4, 12, 16)  # Красный
         curses.init_pair(5, 0, 15)  # Ченрый на белом
         curses.init_pair(6, 26, 16)  # Светло-синий
+        curses.init_color(256, 0, 153, 306)
+        curses.init_color(257, 0, 24, 87)
+        curses.init_pair(20, 256, 257)  # Глубокий синий на сверхтемном синем
+        curses.init_color(258, 0, 275, 550)
+        curses.init_color(259, 4, 40, 138)
+        curses.init_pair(21, 258, 259)  # Насыщенный синий на очень темно синем
+        curses.init_color(260, 816, 988, 1000)
+        curses.init_color(261, 31, 110, 271)
+        curses.init_pair(22, 260, 261)  # Барвинок на горечавково-синием
+        curses.init_pair(23, 15, 257)  # Ярко-белый на сверхтемном синем
+        curses.init_pair(24, 15, 259)  # Ярко-белый на очень темно синем
 
     #  d8b                                888
     #  Y8P                                888
