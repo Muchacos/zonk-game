@@ -1,7 +1,6 @@
 import curses
 import random as r
 import time
-from curses import textpad
 
 import tools as t
 
@@ -23,23 +22,36 @@ def paint_interface(screen):
     ZONE_MSG = screen.ZONE_MSG
 
     for y in range(SH - 1):
-        stdscr.addstr(y, 0, "∙" * SW, curses.color_pair(6))
+        stdscr.addstr(y, 0, "∙" * SW, curses.color_pair(22))
         stdscr.refresh()
         time.sleep(0.06)
     time.sleep(0.75)
 
-    stdscr.attron(curses.color_pair(1))
     for zone, txt in ([ZONE_DICES, "┤dices├"], [ZONE_SCORE, "┤score├"],
                       [ZONE_INPUT, "┤input├"], [ZONE_MSG, "┤msg├"]):
         uy, lx = zone[0] - 1, zone[1] - 1
         ly, rx = zone[2] + 1, zone[3] + 1
-        textpad.rectangle(stdscr, uy, lx, ly, rx)
-        stdscr.addstr(uy, lx, "∙")
-        stdscr.addstr(uy, rx, "∙")
-        stdscr.addstr(ly, lx, "∙")
+        cp_light_border = curses.color_pair(24)
+        cp_shadow1 = curses.color_pair(20)
+        cp_shadow2 = curses.color_pair(21)
+
+        stdscr.addstr(uy, lx + 1, "─" * zone[5], cp_light_border)
+        stdscr.addstr(ly, lx + 1, "─" * zone[5])
+        for line in range(1, zone[4] + 1):
+            stdscr.addstr(uy + line, lx, "│", cp_light_border)
+            stdscr.addstr(uy + line, rx, "│")
+        for line in range(1, zone[4] + 2):
+            stdscr.addstr(uy + line, rx + 1, "∙", cp_shadow1)
+            stdscr.addstr(uy + line + 1, rx + 2, "∙", cp_shadow2)
+        stdscr.addstr(ly + 1, lx + 1, "∙" * (zone[5] + 2), cp_shadow1)
+        stdscr.addstr(ly + 2, lx + 2, "∙" * (zone[5] + 2), cp_shadow2)
+
+        stdscr.addstr(uy, lx, "∙", cp_light_border)
+        stdscr.addstr(uy, rx, "∙", cp_light_border)
+        stdscr.addstr(ly, lx, "∙", cp_light_border)
         stdscr.addstr(ly, rx, "∙")
         screen.clear_zone(zone)
-        stdscr.addstr(uy, rx - len(txt) - 2, txt)
+        stdscr.addstr(uy, rx - len(txt) - 2, txt, cp_light_border)
         stdscr.refresh()
         time.sleep(0.3)
     time.sleep(0.9)

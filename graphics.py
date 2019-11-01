@@ -34,10 +34,10 @@ class Screen:
 
     """
 
-    SH, SW = 30, 70
-    ZONE_MSG = (5, 7, 7, 61, 3, 55)
-    ZONE_DICES = (12, 7, 20, 35, 9, 29)
-    ZONE_SCORE = (12, 42, 20, 61, 9, 20)
+    SH, SW = 31, 70
+    ZONE_MSG = (3, 7, 5, 61, 3, 55)
+    ZONE_DICES = (11, 7, 19, 35, 9, 29)
+    ZONE_SCORE = (11, 42, 19, 61, 9, 20)
     ZONE_INPUT = (25, 7, 25, 35, 1, 29)
 
     DICES_POSITIONS = {
@@ -64,7 +64,7 @@ class Screen:
         curses.noecho()
         stdscr.keypad(True)
         curses.curs_set(0)
-        stdscr.bkgd(" ", curses.color_pair(1))
+        stdscr.bkgd(" ", curses.color_pair(16))
 
     def __del__(self):
         curses.beep()
@@ -75,22 +75,31 @@ class Screen:
 
     def init_pairs(self):
         """Инициализация цветовых пар (используемых цветов)."""
+        curses.init_color(256, 0, 153, 306)  # Глубокий синий
+        curses.init_color(257, 0, 22, 80)  # Сверхтемный синий
+        curses.init_color(258, 0, 275, 550)  # Насыщенный синий
+        curses.init_color(259, 4, 40, 138)  # Очень темно синий
+        curses.init_color(260, 816, 988, 1000)  # Барвинок
+        curses.init_color(261, 31, 110, 271)  # Горчекаво-синий
+
+        # на черном:
         curses.init_pair(1, 15, 16)  # Ярко-белый
         curses.init_pair(2, 16, 16)   # Черный
         curses.init_pair(3, 39, 16)  # Голубой
         curses.init_pair(4, 12, 16)  # Красный
         curses.init_pair(5, 0, 15)  # Ченрый на белом
         curses.init_pair(6, 26, 16)  # Светло-синий
-        curses.init_color(256, 0, 153, 306)
-        curses.init_color(257, 0, 24, 87)
+
+        # на сверхтемном синем:
+        curses.init_pair(16, 15, 257)  # Ярко-белый
+        curses.init_pair(17, 257, 257)  # Свехтемный синий
+        curses.init_pair(18, 39, 257)  # Голубой
+        curses.init_pair(19, 12, 257)  # Красный
+
+        # интерфейс первого забега:
         curses.init_pair(20, 256, 257)  # Глубокий синий на сверхтемном синем
-        curses.init_color(258, 0, 275, 550)
-        curses.init_color(259, 4, 40, 138)
         curses.init_pair(21, 258, 259)  # Насыщенный синий на очень темно синем
-        curses.init_color(260, 816, 988, 1000)
-        curses.init_color(261, 31, 110, 271)
         curses.init_pair(22, 260, 261)  # Барвинок на горечавково-синием
-        curses.init_pair(23, 15, 257)  # Ярко-белый на сверхтемном синем
         curses.init_pair(24, 15, 259)  # Ярко-белый на очень темно синем
 
     #  d8b                                888
@@ -327,7 +336,8 @@ class Screen:
 
         if score != 0:
             if score_type == "pick":
-                stdscr.addstr(y, x, "+{}".format(score), curses.color_pair(3))
+                cp = data.Current_Colors["ltblue"]
+                stdscr.addstr(y, x, "+{}".format(score), curses.color_pair(cp))
             else:
                 stdscr.addstr(y, x, str(score), curses.A_UNDERLINE)
         else:  # Отчищение строки, если очков нет
@@ -397,13 +407,13 @@ class Screen:
     def anim_arrowflick(self, y, x):
         """Проигрывает анимащию мигающей стрелки."""
         stdscr = self.stdscr
-        curr_cp, next_cp = 0, 2
+        curr_symb, next_symb = "▼", " "
         interrupt = False
 
         while not interrupt:
-            stdscr.addstr(y, x, "▼", curses.color_pair(curr_cp))
+            stdscr.addstr(y, x, curr_symb)
+            curr_symb, next_symb = next_symb, curr_symb
             interrupt = self.input_delayinterrupt(0.8)
-            curr_cp, next_cp = next_cp, curr_cp
 
         stdscr.addstr(y, x, " ")
 
@@ -442,7 +452,7 @@ class Screen:
     #  Y8b.      888     888    Y8b.      Y88b.     Y88b.
     #   "Y8888   888     888     "Y8888    "Y8888P   "Y888  88888888
     #
-    def effect_hldices(self, dices=[], *, cp=3):
+    def effect_hldices(self, dices=[], *, cp=data.Current_Colors["ltblue"]):
         """Выделяет кости."""
         scr_dices = self.scr_dices[:]
 

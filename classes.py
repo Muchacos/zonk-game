@@ -78,6 +78,7 @@ class Game:
 
         scr = self.screen
         player = self.player
+        colors = data.Current_Colors
         is_human = player.type == "Human"
 
         run_embed("anim_diceroll", len(self.dices))
@@ -105,7 +106,7 @@ class Game:
             pick_good_dices = t.exclude_array(pick, pick_bad_dices)
 
             if pick_score == 0:
-                scr.effect_hldices(pick, cp=4)
+                scr.effect_hldices(pick, cp=colors["red"])
                 scr.display_msg("a_badallpick", player.name)  # FIXME: см. выше
                 scr.effect_hldices()
                 continue
@@ -113,7 +114,7 @@ class Game:
             player.add_scorepick(pick_score)
             scr.effect_hldices(pick_good_dices)
             if pick_bad_dices:
-                scr.effect_hldices(pick_bad_dices, cp=4)
+                scr.effect_hldices(pick_bad_dices, cp=colors["red"])
                 scr.display_msg("a_badpick")  # FIXME: см. выше
 
             if is_human:
@@ -128,7 +129,7 @@ class Game:
             scr.effect_hldices()
 
         self.dices = t.exclude_array(self.dices, pick_good_dices)
-        scr.effect_hldices(pick_good_dices, cp=2)
+        scr.effect_hldices(pick_good_dices, cp=colors["black"])
         player.add_scoreturn()
         scr.display_msg("a_scrpick", player.name, pick_score)  # FIXME: см.выше
 

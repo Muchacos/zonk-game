@@ -271,6 +271,14 @@ Game_Progress = {
     }
 }
 
+# FIXME: сделать нормальную работу с цветами
+Current_Colors = {
+                  "white": 16,
+                  "black": 17,
+                  "ltblue": 18,
+                  "red": 19,
+}
+
 
 ASCII_DICES = {
     0: ["       ", "       ", "       ", "       "],
