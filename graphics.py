@@ -34,7 +34,7 @@ class Screen:
 
     """
 
-    SH, SW = 31, 70
+    SH, SW = 30, 70
     ZONE_MSG = (3, 7, 5, 61, 3, 55)
     ZONE_DICES = (11, 7, 19, 35, 9, 29)
     ZONE_SCORE = (11, 42, 19, 61, 9, 20)
@@ -82,10 +82,25 @@ class Screen:
         curses.init_color(260, 816, 988, 1000)  # Барвинок
         curses.init_color(261, 31, 110, 271)  # Горчекаво-синий
 
+        # цвета перехода ко второй части:
+        colors = [
+                  (270, 0, 4, 20), (271, 0, 8, 36), (272, 8, 51, 118),
+                  (273, 0, 12, 40), (274, 0, 20, 67), (275, 16, 71, 169),
+                  (276, 0, 16, 63), (277, 4, 28, 102), (278, 24, 91, 220),
+                  (279, 0, 150, 306), (280, 0, 236, 502), (281, 157, 502, 855),
+                  (282, 0, 157, 314), (283, 0, 255, 526), (284, 322, 604, 895),
+                  (285, 0, 165, 326), (286, 4, 275, 553), (287, 479, 691, 906)
+        ]
+        for block in colors:
+            curses.init_color(*block)
+        for back_color in range(270, 279):
+            fore_color = back_color + 9
+            curses.init_pair(back_color - 240, fore_color, back_color)
+
         # на черном:
         curses.init_pair(1, 15, 16)  # Ярко-белый
         curses.init_pair(2, 16, 16)   # Черный
-        curses.init_pair(3, 39, 16)  # Голубой
+        curses.init_pair(3, 39, 16)  # Голубойf
         curses.init_pair(4, 12, 16)  # Красный
         curses.init_pair(5, 0, 15)  # Ченрый на белом
         curses.init_pair(6, 26, 16)  # Светло-синий
