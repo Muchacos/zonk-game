@@ -20,39 +20,19 @@ def paint_interface(screen):
     ZONE_INPUT = screen.ZONE_INPUT
     ZONE_SCORE = screen.ZONE_SCORE
     ZONE_MSG = screen.ZONE_MSG
+    color_pairs = {"white": 0, "back": 22,
+                   "ltshadow": 21, "dkshadow": 20,
+                   "ltborder": 23}
 
     for y in range(SH - 1):
-        stdscr.addstr(y, 0, "∙" * SW, curses.color_pair(22))
+        stdscr.addstr(y, 0, "∙" * SW, curses.color_pair(color_pairs["back"]))
         stdscr.refresh()
         time.sleep(0.06)
     time.sleep(0.75)
 
-    for zone, txt in ([ZONE_DICES, "┤dices├"], [ZONE_SCORE, "┤score├"],
-                      [ZONE_INPUT, "┤input├"], [ZONE_MSG, "┤msg├"]):
-        uy, lx = zone[0] - 1, zone[1] - 1
-        ly, rx = zone[2] + 1, zone[3] + 1
-        cp_light_border = curses.color_pair(24)
-        cp_shadow1 = curses.color_pair(20)
-        cp_shadow2 = curses.color_pair(21)
-
-        stdscr.addstr(uy, lx + 1, "─" * zone[5], cp_light_border)
-        stdscr.addstr(ly, lx + 1, "─" * zone[5])
-        for line in range(1, zone[4] + 1):
-            stdscr.addstr(uy + line, lx, "│", cp_light_border)
-            stdscr.addstr(uy + line, rx, "│")
-        for line in range(1, zone[4] + 2):
-            stdscr.addstr(uy + line, rx + 1, "∙", cp_shadow1)
-            stdscr.addstr(uy + line + 1, rx + 2, "∙", cp_shadow2)
-        stdscr.addstr(ly + 1, lx + 1, "∙" * (zone[5] + 2), cp_shadow1)
-        stdscr.addstr(ly + 2, lx + 2, "∙" * (zone[5] + 2), cp_shadow2)
-
-        stdscr.addstr(uy, lx, "∙", cp_light_border)
-        stdscr.addstr(uy, rx, "∙", cp_light_border)
-        stdscr.addstr(ly, lx, "∙", cp_light_border)
-        stdscr.addstr(ly, rx, "∙")
-        screen.clear_zone(zone)
-        stdscr.addstr(uy, rx - len(txt) - 2, txt, cp_light_border)
-        stdscr.refresh()
+    for zone, head in ([ZONE_DICES, "┤dices├"], [ZONE_SCORE, "┤score├"],
+                       [ZONE_INPUT, "┤input├"], [ZONE_MSG, "┤msg├"]):
+        screen.add_zone(zone, head, color_pairs)
         time.sleep(0.3)
     time.sleep(0.9)
 
@@ -167,3 +147,19 @@ def cheat_twist(gm):
     scr.clear_zone(scr.ZONE_MSG)
     scr.clear_zone(scr.ZONE_SCORE)
     time.sleep(2.5)
+
+
+def interface_fade(screen):
+    colors_data = [
+                   {"white": 43, "back": 38, "ltshadow": 37,
+                    "dkshadow": 36, "ltborder": 44},
+                   {"white": 41, "back": 35, "ltshadow": 34,
+                    "dkshadow": 33, "ltborder": 42},
+                   {"white": 39, "back": 32, "ltshadow": 31,
+                    "dkshadow": 30, "ltborder": 40},
+                   {"white": 1, "back": 50, "ltshadow": 51,
+                    "dkshadow": 52, "ltborder": 1},
+    ]
+    for color_pairs in colors_data:
+        screen.add_interface(color_pairs)
+        time.sleep(2)

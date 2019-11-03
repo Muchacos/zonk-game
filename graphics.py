@@ -3,7 +3,6 @@ import curses
 import os
 import random
 import time
-from curses import textpad
 
 import data
 
@@ -93,9 +92,18 @@ class Screen:
         ]
         for block in colors:
             curses.init_color(*block)
-        for back_color in range(270, 279):
+
+        # цвета врторой части:
+        colors = [(300, 0, 424, 851), (301, 0, 275, 550), (302, 0, 153, 306)]
+        for block in colors:
+            curses.init_color(*block)
+
+        # цветовые пары перехода ко второй части
+        for i, back_color in enumerate(range(270, 279)):
             fore_color = back_color + 9
-            curses.init_pair(back_color - 240, fore_color, back_color)
+            curses.init_pair(30 + i, fore_color, back_color)
+        for i, back_color in enumerate((270, 271, 273, 274, 276, 277)):
+            curses.init_pair(39 + i, 15, back_color)  # границы и внутренности
 
         # на черном:
         curses.init_pair(1, 15, 16)  # Ярко-белый
@@ -115,7 +123,12 @@ class Screen:
         curses.init_pair(20, 256, 257)  # Глубокий синий на сверхтемном синем
         curses.init_pair(21, 258, 259)  # Насыщенный синий на очень темно синем
         curses.init_pair(22, 260, 261)  # Барвинок на горечавково-синием
-        curses.init_pair(24, 15, 259)  # Ярко-белый на очень темно синем
+        curses.init_pair(23, 15, 259)  # Ярко-белый на очень темно синем
+
+        # интерфейс второй части:
+        curses.init_pair(50, 300, 16)  # задниий фон
+        curses.init_pair(51, 301, 16)  # светлая тень
+        curses.init_pair(52, 302, 16)  # темная тень
 
     #  d8b                                888
     #  Y8P                                888
@@ -508,6 +521,57 @@ class Screen:
     #  888  888  Y88b 888  Y88b 888
     #  "Y888888   "Y88888   "Y88888  88888888
     #
+    def add_zone(self, zone, headline, color_pairs):
+        """Добавляет на экран игровую зону, созданную с заданными цветами."""
+        stdscr = self.stdscr
+        uy, lx = zone[0] - 1, zone[1] - 1
+        ly, rx = zone[2] + 1, zone[3] + 1
+        ltshadow = curses.color_pair(color_pairs["ltshadow"])
+        dkshadow = curses.color_pair(color_pairs["dkshadow"])
+        ltborder = curses.color_pair(color_pairs["ltborder"])
+        dkborder = curses.color_pair(color_pairs["white"])
+
+        stdscr.addstr(uy, lx + 1, "─" * zone[5], ltborder)
+        stdscr.addstr(ly, lx + 1, "─" * zone[5], dkborder)
+        for line in range(1, zone[4] + 1):
+            stdscr.addstr(uy + line, lx, "│", ltborder)
+            stdscr.addstr(uy + line, rx, "│", dkborder)
+        for line in range(1, zone[4] + 2):
+            stdscr.addstr(uy + line, rx + 1, "∙", dkshadow)
+            stdscr.addstr(uy + line + 1, rx + 2, "∙", ltshadow)
+        stdscr.addstr(ly + 1, lx + 1, "∙" * (zone[5] + 2), dkshadow)
+        stdscr.addstr(ly + 2, lx + 2, "∙" * (zone[5] + 2), ltshadow)
+
+        stdscr.addstr(uy, lx, "∙", ltborder)
+        stdscr.addstr(uy, rx, "∙", ltborder)
+        stdscr.addstr(ly, lx, "∙", ltborder)
+        stdscr.addstr(ly, rx, "∙", dkborder)
+        self.clear_zone(zone, cp=color_pairs["white"])
+        stdscr.addstr(uy, rx - len(headline) - 2, headline, ltborder)
+        stdscr.refresh()
+
+    def add_interface(self, color_pairs):
+        """Мгновенно добавляет интерфейс на экран."""
+        stdscr = self.stdscr
+        SH, SW = Screen.SH, Screen.SW
+        ZONE_DICES = Screen.ZONE_DICES
+        ZONE_INPUT = Screen.ZONE_INPUT
+        ZONE_SCORE = Screen.ZONE_SCORE
+        ZONE_MSG = Screen.ZONE_MSG
+
+        # Заполнение точками игрового окна
+        self.clear_zone((0, 0, SH - 2, SW - 2, SH, SW), "∙",
+                        cp=color_pairs["back"])
+
+        for zone, head in ([ZONE_DICES, "┤dices├"], [ZONE_SCORE, "┤score├"],
+                           [ZONE_INPUT, "┤input├"], [ZONE_MSG, "┤msg├"]):
+            self.add_zone(zone, head, color_pairs)
+
+        self.add_zonescore(color_pairs["white"])
+        stdscr.addstr(ZONE_INPUT[0], ZONE_INPUT[1] - 1, ">",
+                      curses.color_pair(color_pairs["ltborder"]))
+        stdscr.refresh()
+
     def add_players(self, game_mode):
         """Добавляет на экран имена игроков."""
         stdscr = self.stdscr
@@ -524,48 +588,19 @@ class Screen:
         self.stdscr.addstr(ZONE_SCORE[0] + 7, ZONE_SCORE[1] + 9, str(hbar),
                            curses.A_UNDERLINE)
 
-    def add_zonescore(self):
+    def add_zonescore(self, color_pair=0):
         """Отчищает и отрисовывает зону для очков."""
         stdscr = self.stdscr
         ZONE_SCORE = self.ZONE_SCORE
 
-        self.clear_zone(ZONE_SCORE)
+        self.clear_zone(ZONE_SCORE, cp=color_pair)
         zone_txt = [" Tot _____    _____ ",
                     " Tur _____    _____ ",
                     "     +        +     ",
                     " Win     _____      "]
         for i, y in enumerate((3, 5, 6, 7)):
-            stdscr.addstr(ZONE_SCORE[0] + y, ZONE_SCORE[1], zone_txt[i])
-        stdscr.refresh()
-
-    def add_interface(self):
-        """Мгновенно добавляет интерфейс на экран."""
-        stdscr = self.stdscr
-        SH, SW = Screen.SH, Screen.SW
-        ZONE_DICES = Screen.ZONE_DICES
-        ZONE_INPUT = Screen.ZONE_INPUT
-        ZONE_SCORE = Screen.ZONE_SCORE
-        ZONE_MSG = Screen.ZONE_MSG
-
-        # Заполнение точками игрового окна
-        self.clear_zone((0, 0, SH - 2, SW - 2, SH, SW), "∙", cp=6)
-
-        stdscr.attron(curses.color_pair(1))
-        for zone, txt in ([ZONE_DICES, "┤dices├"], [ZONE_SCORE, "┤score├"],
-                          [ZONE_INPUT, "┤input├"], [ZONE_MSG, "┤msg├"]):
-            uy, lx = zone[0] - 1, zone[1] - 1
-            ly, rx = zone[2] + 1, zone[3] + 1
-            textpad.rectangle(stdscr, uy, lx, ly, rx)
-            stdscr.addstr(uy, lx, "∙")
-            stdscr.addstr(uy, rx, "∙")
-            stdscr.addstr(ly, lx, "∙")
-            stdscr.addstr(ly, rx, "∙")
-            stdscr.addstr(uy, rx - len(txt) - 2, txt)
-            self.clear_zone(zone)
-
-        self.add_zonescore()
-        stdscr.addstr(ZONE_INPUT[0], ZONE_INPUT[1] - 1, ">")
-        stdscr.attroff(curses.color_pair(1))
+            stdscr.addstr(ZONE_SCORE[0] + y, ZONE_SCORE[1],
+                          zone_txt[i], curses.color_pair(color_pair))
         stdscr.refresh()
 
     #            888
