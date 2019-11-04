@@ -13,7 +13,9 @@ progress = data.Game_Progress
 args = sys.argv  # аргументы определяют, с какого уровня начнется игра
 
 if len(args) != 1:
-    screen.add_interface()
+    color_pairs = {"white": 16, "back": 22, "ltshadow": 21,
+                   "dkshadow": 20, "ltborder": 23}
+    screen.add_interface(color_pairs)
     if args[1] == "-lvl2":
         progress["level_1"]["is_complete"] = True
     elif args[1] == "-lvl3":
