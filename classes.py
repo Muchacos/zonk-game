@@ -51,8 +51,6 @@ class Game:
         """Меняет игроков местами."""
         self.player, self.second_player = self.second_player, self.player
         Game.screen.anim_playerhl(self)
-        Game.screen.display_msg("a_whoturn", self.player.name,
-                                delay=data.TIMINGS["DELAY-FST"])
 
     def check_win(self):
         """Возвращает True, если игрок выйграл."""
@@ -71,10 +69,14 @@ class Game:
     #  888  888  Y88b.     Y88b.   888  Y88..88P  888  888
     #  "Y888888   "Y8888P   "Y888  888   "Y88P"   888  888
     #
-    def action(self, *, embed_funcs):
+    def action(self, embed_funcs, event_msgs):
         """Производит основное игровое событие."""
         def run_embed(key, *args, **kwargs):
             return embed_funcs[key](*args, **kwargs)
+
+        def display_event_msg(event_key, *args, **kwargs):
+            if event_key in event_msgs.keys():
+                scr.display_msg(event_msgs[event_key], *args, **kwargs)
 
         scr = self.screen
         player = self.player
@@ -89,7 +91,7 @@ class Game:
         run_embed("display_dices", self.dices)
 
         if not t.has_anycombo(self.dices):
-            scr.display_msg("a_nocombos")  # FIXME: нужен новый функционал
+            display_event_msg("nocombos")
             scr.clear_zone(scr.ZONE_DICES)
             player.clear_scoreturn()
             self.restore_dices()
@@ -100,14 +102,14 @@ class Game:
         while act_choice == data.KEYCODES["TURN_CANCEL"]:
             if is_human:
                 player.clear_scorepick()  # FIXME: вроде кривовато
-                scr.display_msg("a_getpick", wait=False)  # FIXME: см. выше
+                display_event_msg("getpick", wait=False)
             pick = player.get_dicechoose()
             pick_score, pick_bad_dices = t.dices_info(pick).values()
             pick_good_dices = t.exclude_array(pick, pick_bad_dices)
 
             if pick_score == 0:
                 scr.effect_hldices(pick, cp=colors["red"])
-                scr.display_msg("a_badallpick", player.name)  # FIXME: см. выше
+                display_event_msg("badallpick", player.name)
                 scr.effect_hldices()
                 continue
 
@@ -115,28 +117,32 @@ class Game:
             scr.effect_hldices(pick_good_dices)
             if pick_bad_dices:
                 scr.effect_hldices(pick_bad_dices, cp=colors["red"])
-                scr.display_msg("a_badpick")  # FIXME: см. выше
+                display_event_msg("badpick")
 
             if is_human:
-                # FIXME: см. выше
-                scr.display_msg("a_actchoose", wait=False, speedup=2)
+                display_event_msg("actchoice", wait=False, speedup=2)
             act_choice = player.get_actchoice()
             if not is_human:  # FIXME: криво сделано
                 if act_choice == data.KEYCODES["TURN_END"]:
-                    scr.display_msg("a_robturnF")  # FIXME: см. выше
+                    scr.display_msg("a_robturnF")  # FIXME
                 else:
-                    scr.display_msg("a_robturnT")  # FIXME: см. выше
+                    scr.display_msg("a_robturnT")  # FIXME
             scr.effect_hldices()
 
         self.dices = t.exclude_array(self.dices, pick_good_dices)
         scr.effect_hldices(pick_good_dices, cp=colors["black"])
         player.add_scoreturn()
-        scr.display_msg("a_scrpick", player.name, pick_score)  # FIXME: см.выше
+        if is_human:
+            display_event_msg("h_scrpick", player.name, pick_score)
+        else:
+            display_event_msg("r_scrpick", player.name, pick_score)
 
         if act_choice == data.KEYCODES["TURN_END"]:
             player.add_scoretotal()
-            # FIXME: см. выше
-            scr.display_msg("a_scrtotl", player.name, player.score_total)
+            if is_human:
+                display_event_msg("h_scrtotl", player.name, player.score_total)
+            else:
+                display_event_msg("r_scrtotl", player.name, player.score_total)
             scr.clear_zone(scr.ZONE_DICES)
             if self.check_win():
                 self.game_flag = False
@@ -144,6 +150,7 @@ class Game:
                 return 0
             self.restore_dices()
             self.switch_player()
+            display_event_msg("whoturn", self.player.name, delay=1)
         elif len(self.dices) == 0:
             self.restore_dices()
 

@@ -15,6 +15,18 @@ def run(gm):
                    "get_robot_dices": s.get_robot_dices_lev12,
                    "display_dices": scr.display_dices,
     }
+    event_msgs = {
+                  "whoturn": "a_whoturn",
+                  "nocombos": "a_nocombos",
+                  "getpick": "a_getpick",
+                  "badpick": "a_badpick",
+                  "badallpick": "a_badallpick",
+                  "actchoice": "a_actchoice",
+                  "h_scrpick": "a_scrpick",
+                  "r_scrpick": "a_scrpick",
+                  "h_scrtotl": "a_scrtotl",
+                  "r_scrtotl": "a_scrtotl"
+    }
 
     gm.set_settings(hbar, player, enemy)
     scr.add_players(gm)
@@ -25,7 +37,7 @@ def run(gm):
         scr.display_msg_seq("1_welcomelvl_seq")
 
     while gm.game_flag:
-        gm.action(embed_funcs=embed_funcs)
+        gm.action(embed_funcs, event_msgs)
 
     winner = gm.player.type
     if winner == "Human":
