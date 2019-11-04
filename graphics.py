@@ -188,6 +188,7 @@ class Screen:
             # Если нажат Esc
             elif key_id == 27:
                 self.clear_zone(ZONE_INPUT)
+                stdscr.move(ZONE_INPUT[0], ZONE_INPUT[1])
                 inp = ""
 
         curses.curs_set(0)
