@@ -8,14 +8,15 @@ import tools as t
 from Levels.Part_I import intro, level_1, level_2, level_3, unreliable_host
 
 screen = graphics.Screen()
-gm = classes.Game(screen)  # game_mode
+colorist = classes.Colorist(screen)
+screen.set_colorist(colorist)
+gm = classes.Game(screen, colorist)  # game_mode
+
 progress = data.Game_Progress
 args = sys.argv  # аргументы определяют, с какого уровня начнется игра
 
 if len(args) != 1:
-    color_pairs = {"white": 16, "back": 22, "ltshadow": 21,
-                   "dkshadow": 20, "ltborder": 23}
-    screen.add_interface(color_pairs)
+    screen.add_interface()
     if args[1] == "-lvl2":
         progress["level_1"]["is_complete"] = True
     elif args[1] == "-lvl3":

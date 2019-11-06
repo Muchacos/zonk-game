@@ -20,19 +20,16 @@ def paint_interface(screen):
     ZONE_INPUT = screen.ZONE_INPUT
     ZONE_SCORE = screen.ZONE_SCORE
     ZONE_MSG = screen.ZONE_MSG
-    color_pairs = {"white": 0, "back": 22,
-                   "ltshadow": 21, "dkshadow": 20,
-                   "ltborder": 23}
 
     for y in range(SH - 1):
-        stdscr.addstr(y, 0, "∙" * SW, curses.color_pair(color_pairs["back"]))
+        stdscr.addstr(y, 0, "∙" * SW, curses.color_pair(screen.colorist.bkgd))
         stdscr.refresh()
         time.sleep(0.06)
     time.sleep(0.75)
 
     for zone, head in ([ZONE_DICES, "┤dices├"], [ZONE_SCORE, "┤score├"],
                        [ZONE_INPUT, "┤input├"], [ZONE_MSG, "┤msg├"]):
-        screen.add_zone(zone, head, color_pairs)
+        screen.add_zone(zone, head)
         time.sleep(0.3)
     time.sleep(0.9)
 
@@ -150,16 +147,14 @@ def cheat_twist(gm):
 
 
 def interface_fade(screen):
-    colors_data = [
-                   {"white": 43, "back": 38, "ltshadow": 37,
-                    "dkshadow": 36, "ltborder": 44},
-                   {"white": 41, "back": 35, "ltshadow": 34,
-                    "dkshadow": 33, "ltborder": 42},
-                   {"white": 39, "back": 32, "ltshadow": 31,
-                    "dkshadow": 30, "ltborder": 40},
-                   {"white": 1, "back": 50, "ltshadow": 51,
-                    "dkshadow": 52, "ltborder": 1},
+    colorist = screen.colorist
+    fade_palettes = [
+                     (40, 204, 204, 204, 43, 46, 49, 40),
+                     (41, 204, 204, 204, 44, 47, 50, 41),
+                     (42, 204, 204, 204, 45, 48, 51, 42),
+                     colorist.FIRST_LEVEL
     ]
-    for color_pairs in colors_data:
-        screen.add_interface(color_pairs)
+    for palette in fade_palettes:
+        colorist.change_color_palette(palette)
+        screen.add_interface()
         time.sleep(2)

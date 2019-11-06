@@ -24,6 +24,7 @@ class Screen:
     scr_dices -- кости, находящийся на экране. Индекс означает позицию по
                  DICES_POSITIONS. Значение "0" означает пустоту, т.е. при
                  отображении "нулевой" кости, ее позиция очистится.
+    colorist -- экземпляр соответсвующего класса
     SH, SW -- досл. screen hight и screen width
     ZONE_*NAME* -- координаты различных зон экрана:
                    [0] и [1] - y и x левого верхнего угла;
@@ -48,22 +49,21 @@ class Screen:
         5: (ZONE_DICES[0] + 4, ZONE_DICES[1] + 20)
     }
 
+    colorist = None
+
     def __init__(self):
-        SH, SW = Screen.SH, Screen.SW
+        self.stdscr = curses.initscr()
         self.scr_dices = [0] * 6
         self.msg_display_settings = data.MSG_DISPLAY_DEFAULT_SETTINGS.copy()
-        self.stdscr = curses.initscr()
+
         stdscr = self.stdscr
+        SH, SW = Screen.SH, Screen.SW
 
         os.system("mode con: cols={0} lines={1}".format(SW, SH))
         stdscr.resize(SH, SW)
-        curses.start_color()
-        curses.use_default_colors()
-        self.init_pairs()
         curses.noecho()
         stdscr.keypad(True)
         curses.curs_set(0)
-        stdscr.bkgd(" ", curses.color_pair(16))
 
     def __del__(self):
         curses.beep()
@@ -307,7 +307,7 @@ class Screen:
 
         if score != 0:
             if score_type == "pick":
-                cp = data.Current_Colors["ltblue"]
+                cp = Screen.colorist.blue
                 stdscr.addstr(y, x, "+{}".format(score), curses.color_pair(cp))
             else:
                 stdscr.addstr(y, x, str(score), curses.A_UNDERLINE)
@@ -331,6 +331,7 @@ class Screen:
         """Проигрывает анимацию бегунка, выделяющего имена игроков."""
         stdscr = self.stdscr
         ZONE_SCORE = Screen.ZONE_SCORE
+        white_cp = Screen.colorist.white
         y = ZONE_SCORE[0] + 1
 
         # Если текущий игрок - человек, то выделение перемещается справa
@@ -348,7 +349,7 @@ class Screen:
                     stdscr.chgat(y, x_f, 1, curses.color_pair(5))
                 # Ограничение, чтобы выделение не снималось с имени человека
                 if x_b >= ZONE_SCORE[1] + 5 + len(name_h):
-                    stdscr.chgat(y, x_b, 1, curses.color_pair(0))
+                    stdscr.chgat(y, x_b, 1, curses.color_pair(white_cp))
 
                 stdscr.refresh()
                 time.sleep(0.03)
@@ -362,7 +363,7 @@ class Screen:
                 if x_f < ZONE_SCORE[1] + 14 + len(name_r):
                     stdscr.chgat(y, x_f, 1, curses.color_pair(5))
                 if x_b < ZONE_SCORE[1] + 14:
-                    stdscr.chgat(y, x_b, 1, curses.color_pair(0))
+                    stdscr.chgat(y, x_b, 1, curses.color_pair(white_cp))
 
                 stdscr.refresh()
                 time.sleep(0.03)
@@ -423,9 +424,11 @@ class Screen:
     #  Y8b.      888     888    Y8b.      Y88b.     Y88b.
     #   "Y8888   888     888     "Y8888    "Y8888P   "Y888  88888888
     #
-    def effect_hldices(self, dices=[], *, cp=data.Current_Colors["ltblue"]):
+    def effect_hldices(self, dices=[], *, cp=None):
         """Выделяет кости."""
         scr_dices = self.scr_dices[:]
+        if not cp:
+            cp = Screen.colorist.blue
 
         if dices != []:
             for value in dices:
@@ -464,15 +467,16 @@ class Screen:
     #  888  888  Y88b 888  Y88b 888
     #  "Y888888   "Y88888   "Y88888  88888888
     #
-    def add_zone(self, zone, headline, color_pairs):
+    def add_zone(self, zone, headline):
         """Добавляет на экран игровую зону, созданную с заданными цветами."""
         stdscr = self.stdscr
+        colorist = Screen.colorist
         uy, lx = zone[0] - 1, zone[1] - 1
         ly, rx = zone[2] + 1, zone[3] + 1
-        ltshadow = curses.color_pair(color_pairs["ltshadow"])
-        dkshadow = curses.color_pair(color_pairs["dkshadow"])
-        ltborder = curses.color_pair(color_pairs["ltborder"])
-        dkborder = curses.color_pair(color_pairs["white"])
+        ltshadow = curses.color_pair(colorist.bkgd_ltshadow)
+        dkshadow = curses.color_pair(colorist.bkgd_dkshadow)
+        ltborder = curses.color_pair(colorist.bkgd_ltborder)
+        dkborder = curses.color_pair(0)
 
         stdscr.addstr(uy, lx + 1, "─" * zone[5], ltborder)
         stdscr.addstr(ly, lx + 1, "─" * zone[5], dkborder)
@@ -489,13 +493,14 @@ class Screen:
         stdscr.addstr(uy, rx, "∙", ltborder)
         stdscr.addstr(ly, lx, "∙", ltborder)
         stdscr.addstr(ly, rx, "∙", dkborder)
-        self.clear_zone(zone, cp=color_pairs["white"])
+        self.clear_zone(zone)
         stdscr.addstr(uy, rx - len(headline) - 2, headline, ltborder)
         stdscr.refresh()
 
-    def add_interface(self, color_pairs):
+    def add_interface(self):
         """Мгновенно добавляет интерфейс на экран."""
         stdscr = self.stdscr
+        colorist = Screen.colorist
         SH, SW = Screen.SH, Screen.SW
         ZONE_DICES = Screen.ZONE_DICES
         ZONE_INPUT = Screen.ZONE_INPUT
@@ -503,16 +508,15 @@ class Screen:
         ZONE_MSG = Screen.ZONE_MSG
 
         # Заполнение точками игрового окна
-        self.clear_zone((0, 0, SH - 2, SW - 2, SH, SW), "∙",
-                        cp=color_pairs["back"])
+        self.clear_zone((0, 0, SH - 2, SW - 2, SH, SW), "∙", cp=colorist.bkgd)
 
         for zone, head in ([ZONE_DICES, "┤dices├"], [ZONE_SCORE, "┤score├"],
                            [ZONE_INPUT, "┤input├"], [ZONE_MSG, "┤msg├"]):
-            self.add_zone(zone, head, color_pairs)
+            self.add_zone(zone, head)
 
-        self.add_zonescore(color_pairs["white"])
+        self.add_zonescore()
         stdscr.addstr(ZONE_INPUT[0], ZONE_INPUT[1] - 1, ">",
-                      curses.color_pair(color_pairs["ltborder"]))
+                      curses.color_pair(colorist.bkgd_ltborder))
         stdscr.refresh()
 
     def add_players(self, game_mode):
@@ -531,19 +535,17 @@ class Screen:
         self.stdscr.addstr(ZONE_SCORE[0] + 7, ZONE_SCORE[1] + 9, str(hbar),
                            curses.A_UNDERLINE)
 
-    def add_zonescore(self, color_pair=0):
+    def add_zonescore(self):
         """Отчищает и отрисовывает зону для очков."""
         stdscr = self.stdscr
         ZONE_SCORE = self.ZONE_SCORE
-
-        self.clear_zone(ZONE_SCORE, cp=color_pair)
         zone_txt = [" Tot _____    _____ ",
                     " Tur _____    _____ ",
                     "     +        +     ",
                     " Win     _____      "]
+        self.clear_zone(ZONE_SCORE)
         for i, y in enumerate((3, 5, 6, 7)):
-            stdscr.addstr(ZONE_SCORE[0] + y, ZONE_SCORE[1],
-                          zone_txt[i], curses.color_pair(color_pair))
+            stdscr.addstr(ZONE_SCORE[0] + y, ZONE_SCORE[1], zone_txt[i])
         stdscr.refresh()
 
     #            888
@@ -582,6 +584,10 @@ class Screen:
             settings["wait"] = std_settings["wait"]
         if speedup:
             settings["speedup"] = std_settings["speedup"]
+
+    def set_colorist(self, colorist):
+        """Делает, что сказано."""
+        Screen.colorist = colorist
 
     def beep(self):
         """Делает *прлууммм*."""

@@ -35,9 +35,11 @@ class Game:
     """
 
     screen = None
+    colorist = None
 
-    def __init__(self, screen):
+    def __init__(self, screen, colorist):
         Game.screen = screen
+        Game.colorist = colorist
         self.game_flag = True
         self.dices = [1] * 6
         self.temp_dices = []
@@ -81,7 +83,7 @@ class Game:
 
         scr = self.screen
         player = self.player
-        colors = data.Current_Colors
+        colorist = Game.colorist
         is_human = player.type == "Human"
 
         run_embed("anim_diceroll", len(self.dices))
@@ -109,7 +111,7 @@ class Game:
             pick_good_dices = t.exclude_array(pick, pick_bad_dices)
 
             if pick_score == 0:
-                scr.effect_hldices(pick, cp=colors["red"])
+                scr.effect_hldices(pick, cp=colorist.red)
                 display_event_msg("badallpick", player.name)
                 scr.effect_hldices()
                 continue
@@ -117,7 +119,7 @@ class Game:
             player.add_scorepick(pick_score)
             scr.effect_hldices(pick_good_dices)
             if pick_bad_dices:
-                scr.effect_hldices(pick_bad_dices, cp=colors["red"])
+                scr.effect_hldices(pick_bad_dices, cp=colorist.red)
                 display_event_msg("badpick")
 
             if is_human:
@@ -131,7 +133,7 @@ class Game:
             scr.effect_hldices()
 
         self.dices = t.exclude_array(self.dices, pick_good_dices)
-        scr.effect_hldices(pick_good_dices, cp=colors["black"])
+        scr.effect_hldices(pick_good_dices, cp=colorist.none)
         player.add_scoreturn()
         if is_human:
             display_event_msg("h_scrpick", player.name, pick_score)
@@ -156,6 +158,15 @@ class Game:
             self.restore_dices()
 
 
+#   .d8888b.   .d8888b.  888    .d8888b.  8888888b.  88888  .d8888b.  888888888
+#  d88P  Y88b d88P""Y88b 888   d88P""Y88b 888   Y88b  888  d88P  Y88b    888
+#  888    888 888    888 888   888    888 888    888  888  Y88b.         888
+#  888        888    888 888   888    888 888   d88P  888   "Y888b.      888
+#  888        888    888 888   888    888 8888888P"   888      "Y88b.    888
+#  888    888 888    888 888   888    888 888 T88b    888        "888    888
+#  Y88b  d88P Y88b..d88P 888   Y88b..d88P 888  T88b   888  Y88b  d88P    888
+#   "Y8888P"   "Y8888P"  888888 "Y8888P"  888   T88b 88888  "Y8888P"     888
+#
 class Colorist:
     """Представляет менеджера, отвечающего за работу с цветами.
 
@@ -165,16 +176,19 @@ class Colorist:
                       [4] - фон, [5] - светлая тень, [6] - темная тень,
                       [7] - светлая граница.
 
+    screen -- экземпляр соответсвующего класса
     current_palette -- текущая цветовая палитра
     *pairname* -- индекс цветовой пары, представляющей на данный момент
                   указанный цвет. Проще говоря, ссылки на пары в палитре.
-
     """
 
     FAST_SPRINT = (20, 21, 22, 23, 24, 25, 26, 27)
     FIRST_LEVEL = (1, 2, 3, 4, 30, 31, 32, 1)
 
-    def __init__(self):
+    def __init__(self, screen):
+        Colorist.screen = screen
+        curses.start_color()
+        curses.use_default_colors()
         self.init_colors()
         self.init_pairs()
         self.change_color_palette(self.FAST_SPRINT)
@@ -190,6 +204,7 @@ class Colorist:
         self.bkgd_ltshadow = palette[5]
         self.bkgd_dkshadow = palette[6]
         self.bkgd_ltborder = palette[7]
+        Colorist.screen.stdscr.bkgdset(" ", curses.color_pair(self.white))
 
     def init_color(self, id, r, g, b):
         """Создает цвет, переводя его в формат, пригодный для curses."""
@@ -198,24 +213,25 @@ class Colorist:
 
     def init_fade_colors(self, id_start, k, c0_id, c1_id):
         """Создает k промежуточных цветов между цветами c0 и c1."""
+        c0 = curses.color_content(c0_id)
+        c1 = curses.color_content(c1_id)
         for i in range(1, k + 1):
             new_color = []
-            c0, c1 = curses.color_content(c0_id), curses.color_content(c1_id)
             for ch in range(3):  # channel
-                new_ch = round(i / (k + 1) * (c0[ch] - c1[ch])) + c0[ch]
+                new_ch = round(i / (k + 1) * (c1[ch] - c0[ch])) + c0[ch]
                 new_color.append(new_ch)
-            self.init_color(id_start + i - 1, *new_color)
+            curses.init_color(id_start + i - 1, *new_color)
 
     def init_fade_pairs(self, id_start, fore0, fore1, back0, back1):
         """Создает цветовые пары, объединяя диапазоны fore0-1 и back0-1."""
         if fore0 == fore1:
             k = (back1 - back0 + 1)
-            fore_ids = (fore0) * k
+            fore_ids = [fore0] * k
         else:
             k = (fore1 - fore0 + 1)
             fore_ids = range(fore0, fore1 + 1)
         if back0 == back1:
-            back_ids = (back0) * k
+            back_ids = [back0] * k
         else:
             back_ids = range(back0, back1 + 1)
 
@@ -224,6 +240,7 @@ class Colorist:
 
     def init_colors(self):
         """Создание используемых цветов."""
+        self.init_color(16, 0, 0, 0)
         # быстрый забег
         self.init_color(30, 165, 202, 246)  # точки фона
         self.init_color(31, 0, 70, 140)  # точки светлой тени
@@ -244,31 +261,6 @@ class Colorist:
         self.init_fade_colors(79, 3, 33, 16)  # фон
         self.init_fade_colors(82, 3, 34, 16)  # фон светлой тени
         self.init_fade_colors(85, 3, 35, 16)  # фон зоны (темной тени)
-        '''
-        curses.init_color(256, 0, 40, 79)  # Глубокий синий
-        curses.init_color(257, 0, 6, 21)  # Сверхтемный синий
-        curses.init_color(258, 0, 71, 141)  # Насыщенный синий
-        curses.init_color(259, 2, 11, 36)  # Очень темно синий
-        curses.init_color(260, 209, 252, 255)  # Барвинок
-        curses.init_color(261, 8, 29, 70)  # Горчекаво-синий
-
-        # цвета перехода ко второй части:
-        colors = [
-                  (270, 0, 4, 20), (271, 0, 8, 36), (272, 8, 51, 118),
-                  (273, 0, 12, 40), (274, 0, 20, 67), (275, 16, 71, 169),
-                  (276, 0, 16, 63), (277, 4, 28, 102), (278, 24, 91, 220),
-                  (279, 0, 150, 306), (280, 0, 236, 502), (281, 157, 502, 855),
-                  (282, 0, 157, 314), (283, 0, 255, 526), (284, 322, 604, 895),
-                  (285, 0, 165, 326), (286, 4, 275, 553), (287, 479, 691, 906)
-        ]
-        for block in colors:
-            curses.init_color(*block)
-
-        # цвета врторой части:
-        colors = [(300, 0, 109, 218), (301, 0, 71, 141), (302, 0, 40, 79)]
-        for block in colors:
-            curses.init_color(*block)
-        '''
 
     def init_pairs(self):
         """Создание цветовых пар."""
@@ -278,6 +270,7 @@ class Colorist:
         curses.init_pair(3, 39, 16)  # голубой
         curses.init_pair(4, 12, 16)  # красный
         curses.init_pair(5, 16, 15)  # ченрый на белом
+        curses.init_pair(204, 201, 15)  # ярко-фиолетовый (цвет для ошибок)
 
         # быстрый забег
         curses.init_pair(20, 15, 35)  # белый
@@ -296,44 +289,12 @@ class Colorist:
         curses.init_pair(32, 42, 16)  # темная тень
 
         # переход к первому уровню
-        self.init_fade_pairs(40, 15, 15, 85, 87)
-        self.init_fade_pairs(43, 70, 72, 79, 81)
-        self.init_fade_pairs(46, 73, 75, 82, 84)
-        self.init_fade_pairs(49, 76, 78, 85, 87)
-        '''
-        # цветовые пары перехода ко второй части
-        for i, back_color in enumerate(range(270, 279)):
-            fore_color = back_color + 9
-            curses.init_pair(30 + i, fore_color, back_color)
-        for i, back_color in enumerate((270, 271, 273, 274, 276, 277)):
-            curses.init_pair(39 + i, 15, back_color)  # границы и внутренности
+        self.init_fade_pairs(40, 15, 15, 85, 87)  # белый
+        self.init_fade_pairs(43, 70, 72, 79, 81)  # фон
+        self.init_fade_pairs(46, 73, 75, 82, 84)  # светлая тень
+        self.init_fade_pairs(49, 76, 78, 85, 87)  # темная тень
 
-        # на черном:
-        curses.init_pair(1, 15, 16)  # Ярко-белый
-        curses.init_pair(2, 16, 16)   # Черный
-        curses.init_pair(3, 39, 16)  # Голубой
-        curses.init_pair(4, 12, 16)  # Красный
-        curses.init_pair(5, 0, 15)  # Ченрый на белом
-        curses.init_pair(6, 26, 16)  # Светло-синий
-
-        # на сверхтемном синем:
-        curses.init_pair(16, 15, 257)  # Ярко-белый
-        curses.init_pair(17, 257, 257)  # Свехтемный синий
-        curses.init_pair(18, 39, 257)  # Голубой
-        curses.init_pair(19, 12, 257)  # Красный
-
-        # интерфейс первого забега:
-        curses.init_pair(20, 256, 257)  # Глубокий синий на сверхтемном синем
-        curses.init_pair(21, 258, 259)  # Насыщенный синий на очень темно синем
-        curses.init_pair(22, 260, 261)  # Барвинок на горечавково-синием
-        curses.init_pair(23, 15, 259)  # Ярко-белый на очень темно синем
-
-        # интерфейс второй части:
-        curses.init_pair(50, 300, 16)  # задниий фон
-        curses.init_pair(51, 301, 16)  # светлая тень
-        curses.init_pair(52, 302, 16)  # темная тень
-        '''
-    def convert_color(*channels):
+    def convert_color(self, *channels):
         """Конвертирует цвет из формата 0-255 в формат 0-1000."""
         return [round(ch / 255 * 1000 + 0.5) for ch in channels]
 
