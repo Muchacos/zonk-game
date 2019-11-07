@@ -1,5 +1,8 @@
+from Levels.Part_I import scripts as s
+
+
 def run(screen):
-    screen.msg_display_attron()
+    s.interface_fade(screen)
     screen.display_msg_seq("uh_first_seq")
     screen.display_msg("empty", delay=-1.5)
     screen.display_msg("uh_try", speedup=0.2)

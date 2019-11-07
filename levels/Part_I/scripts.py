@@ -132,20 +132,30 @@ def cheat_twist(gm):
     # иммитация взятия костей роботом и начисления очков
     scr.effect_hldices(cheated_dices)
     robot.add_scorepick(4000)
-    scr.msg_display_attron(delay=3)
     scr.display_msg("a_robturnF")
     scr.effect_hldices(cheated_dices, cp=2)
     robot.add_scoreturn()
     scr.display_msg("a_scrpick", robname, 4000)
     robot.add_scoretotal()
     scr.display_msg("a_scrtotl", robname, robot.score_total)
-    scr.display_msg("3_robwin", robname)
-    scr.msg_display_attroff(delay=True)
+    scr.display_msg("3_robwin", robname, delay=1)
     scr.clear_zone(scr.ZONE_MSG)
     scr.clear_zone(scr.ZONE_SCORE)
-    time.sleep(2.5)
 
 
+#  ██╗   ██╗ ███╗   ██╗ ██████╗  ███████╗ ██╗
+#  ██║   ██║ ████╗  ██║ ██╔══██╗ ██╔════╝ ██║
+#  ██║   ██║ ██╔██╗ ██║ ██████╔╝ █████╗   ██║
+#  ██║   ██║ ██║╚██╗██║ ██╔══██╗ ██╔══╝   ██║
+#  ╚██████╔╝ ██║ ╚████║ ██║  ██║ ███████╗ ███████╗ ██╗
+#   ╚═════╝  ╚═╝  ╚═══╝ ╚═╝  ╚═╝ ╚══════╝ ╚══════╝ ╚═╝
+#  ██╗  ██╗  ██████╗  ███████╗ ████████╗
+#  ██║  ██║ ██╔═══██╗ ██╔════╝ ╚══██╔══╝
+#  ███████║ ██║   ██║ ███████╗    ██║
+#  ██╔══██║ ██║   ██║ ╚════██║    ██║
+#  ██║  ██║ ╚██████╔╝ ███████║    ██║
+#  ╚═╝  ╚═╝  ╚═════╝  ╚══════╝    ╚═╝
+#
 def interface_fade(screen):
     colorist = screen.colorist
     fade_palettes = [
@@ -155,6 +165,6 @@ def interface_fade(screen):
                      colorist.FIRST_LEVEL
     ]
     for palette in fade_palettes:
-        colorist.change_color_palette(palette)
+        colorist.change_palette(palette)
         screen.add_interface()
-        time.sleep(2)
+        time.sleep(1.2)

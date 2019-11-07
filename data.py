@@ -246,9 +246,9 @@ ROBOT_TACTIC_NAME = "h300"
 ROBOT_CALCULATOR_NAME = "Игорь"
 
 HIGH_BARS = {
-    "level_1": 1500,
-    "level_2": 2000,
-    "level_3": 3000,
+    "level_1": 1200,
+    "level_2": 1500,
+    "level_3": 2000,
 }
 
 MSG_DISPLAY_DEFAULT_SETTINGS = {
