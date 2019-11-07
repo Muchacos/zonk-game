@@ -392,11 +392,10 @@ class Screen:
     def anim_percharword(self, word, ch_print_delay, can_skip):
         """Посимвольно выводит слово на экран."""
         stdscr = self.stdscr
-
         curses.flushinp()
         stdscr.timeout(0)
-        for alpha in word + " ":
-            stdscr.addch(alpha)
+        for char in word + " ":
+            stdscr.addch(char)
             stdscr.refresh()
             # Если игрок нажал кнопку и можно пропустить анимацию
             if stdscr.getch() != -1 and can_skip:

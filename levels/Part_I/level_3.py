@@ -42,7 +42,7 @@ def run(gm):
     # Пока игрок не закончит ход со счетом больше hbar - 300
     while (gm.player.type == "Human" or
            gm.second_player.score_total < hbar - 300):
-        gm.action(embed_funcs=embed_funcs)
+        gm.action(embed_funcs, event_msgs)
 
     # Финальный бросок костей робота
     s.cheat_twist(gm)

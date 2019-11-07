@@ -191,9 +191,9 @@ class Colorist:
         curses.use_default_colors()
         self.init_colors()
         self.init_pairs()
-        self.change_color_palette(self.FAST_SPRINT)
+        self.change_palette(self.FAST_SPRINT)
 
-    def change_color_palette(self, palette):
+    def change_palette(self, palette):
         """Изменяет текущую палитру вместе с ссылками на ее цвета"""
         self.current_palette = palette
         self.white = palette[0]
@@ -205,6 +205,10 @@ class Colorist:
         self.bkgd_dkshadow = palette[6]
         self.bkgd_ltborder = palette[7]
         Colorist.screen.stdscr.bkgdset(" ", curses.color_pair(self.white))
+
+    def convert_color(self, *channels):
+        """Конвертирует цвет из формата 0-255 в формат 0-1000."""
+        return [round(ch / 255 * 1000 + 0.5) for ch in channels]
 
     def init_color(self, id, r, g, b):
         """Создает цвет, переводя его в формат, пригодный для curses."""
@@ -240,7 +244,9 @@ class Colorist:
 
     def init_colors(self):
         """Создание используемых цветов."""
-        self.init_color(16, 0, 0, 0)
+        self.init_color(16, 0, 0, 0)  # черный
+        self.init_color(3, 51, 204, 255)  # ярко-голубой (выделение)
+
         # быстрый забег
         self.init_color(30, 165, 202, 246)  # точки фона
         self.init_color(31, 0, 70, 140)  # точки светлой тени
@@ -293,10 +299,6 @@ class Colorist:
         self.init_fade_pairs(43, 70, 72, 79, 81)  # фон
         self.init_fade_pairs(46, 73, 75, 82, 84)  # светлая тень
         self.init_fade_pairs(49, 76, 78, 85, 87)  # темная тень
-
-    def convert_color(self, *channels):
-        """Конвертирует цвет из формата 0-255 в формат 0-1000."""
-        return [round(ch / 255 * 1000 + 0.5) for ch in channels]
 
 
 #  8888888b.   888             d8888  Y88b   d88P  8888888888  8888888b.
