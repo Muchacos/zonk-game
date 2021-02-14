@@ -79,8 +79,7 @@ class RobotRandom(RobotMeta):
 
     def get_actchoice(self):
         gm = RobotMeta.gm
-        dices = gm.dices
-        n_dices = len(dices)
+        n_dices = len(t.exclude_array(gm.dices, self.claw))
         chance_to_continue = 0
 
         if n_dices == 0:

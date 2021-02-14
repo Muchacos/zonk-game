@@ -1,7 +1,7 @@
 import data
 import tools as t
 from . import scripts as s
-from Classes.Players import c_human, c_robot_random
+from Classes.Players import c_human, c_robot_tactic
 
 
 def run(gm):

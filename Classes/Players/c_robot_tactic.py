@@ -64,8 +64,7 @@ class RobotTactic(RobotMeta):
                 y = round(-2.5 * (x - 200)**(1 / 2) + 100)
             return y
 
-        dices = RobotMeta.gm.dices
-        n_dices = len(dices)
+        n_dices = len(t.exclude_array(RobotMeta.gm.dices, self.claw))
         chance_to_continue = chance_curve(self.score_turn)
 
         # Нюансы, увеличивающие или уменьшающие шанс продолжить ход
@@ -73,11 +72,13 @@ class RobotTactic(RobotMeta):
            + self.score_pick >= RobotMeta.gm.high_bar):
             chance_to_continue = 0
         elif n_dices == 0:
-            chance_to_continue += 90
+            chance_to_continue += 95
         elif n_dices == 5:
             chance_to_continue += 30
-        elif n_dices < 3:
-            chance_to_continue -= 30
+        elif n_dices == 2:
+            chance_to_continue -= 35
+        elif n_dices == 1:
+            chance_to_continue -= 50
 
         choice = t.chance(chance_to_continue)
         if choice is True:
