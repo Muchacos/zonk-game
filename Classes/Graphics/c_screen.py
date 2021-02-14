@@ -305,7 +305,7 @@ class Screen:
             if score_type == "pick":
                 stdscr.addstr(y, x, "+" + " " * 5)
             else:
-                stdscr.addstr(y, x, "_____")
+                stdscr.addstr(y, x, "     ", curses.A_UNDERLINE)
         stdscr.refresh()
 
     #                      d8b
@@ -528,13 +528,21 @@ class Screen:
         """Отчищает и отрисовывает зону для очков."""
         stdscr = self.stdscr
         ZONE_SCORE = self.ZONE_SCORE
-        zone_txt = [" Tot _____    _____ ",
-                    " Tur _____    _____ ",
+        zone_txt = [" Tot                ",
+                    " Tur                ",
                     "     +        +     ",
-                    " Win     _____      "]
+                    " Win                "]
         self.clear_zone(ZONE_SCORE)
         for i, y in enumerate((3, 5, 6, 7)):
             stdscr.addstr(ZONE_SCORE[0] + y, ZONE_SCORE[1], zone_txt[i])
+            if y == 3 or y == 5:
+                stdscr.addstr(ZONE_SCORE[0] + y, ZONE_SCORE[1] + 5, "     ",
+                              curses.A_UNDERLINE)
+                stdscr.addstr(ZONE_SCORE[0] + y, ZONE_SCORE[1] + 14, "     ",
+                              curses.A_UNDERLINE)
+            elif y == 7:
+                stdscr.addstr(ZONE_SCORE[0] + y, ZONE_SCORE[1] + 9, "     ",
+                              curses.A_UNDERLINE)
         stdscr.refresh()
 
     #            888

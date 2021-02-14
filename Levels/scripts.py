@@ -33,12 +33,20 @@ def paint_interface(screen):
         time.sleep(0.3)
     time.sleep(0.9)
 
-    zonescore = [" Tot _____    _____ ",
-                 " Tur _____    _____ ",
-                 "     +        +     ",
-                 " Win     _____      "]
+    zone_txt = [" Tot                ",
+                " Tur                ",
+                "     +        +     ",
+                " Win                "]
     for i, y in enumerate((3, 5, 6, 7)):
-        stdscr.addstr(ZONE_SCORE[0] + y, ZONE_SCORE[1], zonescore[i])
+        stdscr.addstr(ZONE_SCORE[0] + y, ZONE_SCORE[1], zone_txt[i])
+        if y == 3 or y == 5:
+            stdscr.addstr(ZONE_SCORE[0] + y, ZONE_SCORE[1] + 5, "     ",
+                          curses.A_UNDERLINE)
+            stdscr.addstr(ZONE_SCORE[0] + y, ZONE_SCORE[1] + 14, "     ",
+                          curses.A_UNDERLINE)
+        elif y == 7:
+            stdscr.addstr(ZONE_SCORE[0] + y, ZONE_SCORE[1] + 9, "     ",
+                          curses.A_UNDERLINE)
         stdscr.refresh()
         time.sleep(0.2)
 
@@ -73,7 +81,7 @@ def get_robot_dices_lev12(gm):
         possible_score = t.dices_info(dices)["score"]
         if possible_score == 0 and t.chance(25):
             continue
-        if possible_score < score_to_win and possible_score < 1000:
+        if possible_score < score_to_win:
             break
     return dices
 
