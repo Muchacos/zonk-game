@@ -1,14 +1,14 @@
-import classes
 import data
 import tools as t
-from Levels.Part_I import scripts as s
+from . import scripts as s
+from Classes.Players import c_human, c_robot_tactic
 
 
 def run(gm):
     scr = gm.screen
-    player = classes.Human(gm, scr, data.PLAYER_NAME)
-    enemy = classes.RobotRandom(gm, scr, data.ROBOT_RANDOM_NAME)
-    hbar = data.HIGH_BARS["level_1"]
+    player = c_human.Human(gm, scr, data.PLAYER_NAME)
+    enemy = c_robot_tactic.RobotTactic(gm, scr, data.ROBOT_TACTIC_NAME)
+    hbar = data.HIGH_BARS["level_2"]
     embed_funcs = {
                    "anim_diceroll": scr.anim_diceroll,
                    "get_human_dices": s.get_human_dices_lev12,
@@ -32,22 +32,21 @@ def run(gm):
     scr.add_players(gm)
     scr.add_high_bar(hbar)
 
-    if t.games_count("level_1") == 0:
-        scr.display_msg("1_welcomelvl", data.PLAYER_NAME)
-        scr.display_msg_seq("1_welcomelvl_seq")
+    if t.games_count("level_2") == 0:
+        scr.display_msg_seq("2_welcomelvl_seq")
+        scr.display_msg("2_robotname", data.PLAYER_NAME,
+                        data.ROBOT_TACTIC_NAME)
 
     while gm.game_flag:
         gm.action(embed_funcs, event_msgs)
 
     winner = gm.player.type
     if winner == "Human":
-        scr.display_msg("1_win1", data.PLAYER_NAME)
-        scr.display_msg("1_win2")
-        scr.display_msg("1_win3")
-        data.Game_Progress["level_1"]["is_complete"] = True
+        scr.display_msg_seq("2_win_seq")
+        data.Game_Progress["level_2"]["is_complete"] = True
     else:
-        scr.display_msg_seq("1_loose_seq")
-        data.Game_Progress["level_1"]["games"] += 1
+        scr.display_msg_seq("2_loose_seq")
+        data.Game_Progress["level_2"]["losses"] += 1
 
     scr.add_zonescore()
     scr.clear_zone(scr.ZONE_DICES)

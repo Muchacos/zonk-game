@@ -1,6 +1,6 @@
 import curses
-import random as r
 import time
+import random as r
 
 import tools as t
 

@@ -1,16 +1,16 @@
 """Здесь происходит объединение всех модулей в полноценную игру."""
 import sys
 
-import classes
 import data
-import graphics
 import tools as t
-from Levels.Part_I import intro, level_1, level_2, level_3, unreliable_host
+from Classes import c_game_mode
+from Classes.Graphics import c_screen, c_colorist
+from Levels import intro, level_1, level_2, level_3, unreliable_host
 
-screen = graphics.Screen()
-colorist = classes.Colorist(screen)
+screen = c_screen.Screen()
+colorist = c_colorist.Colorist(screen)
 screen.set_colorist(colorist)
-gm = classes.Game(screen, colorist)  # game_mode
+gm = c_game_mode.GameMode(screen, colorist)
 
 progress = data.Game_Progress
 args = sys.argv  # аргументы определяют, с какого уровня начнется игра
@@ -25,7 +25,7 @@ if len(args) != 1:
 else:
     intro.run(screen)
 
-# Цикл, запускающий уровни игры
+# Основной цикл игры
 while True:
     if not t.is_complete("level_1"):
         level_1.run(gm)

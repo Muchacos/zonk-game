@@ -1,12 +1,13 @@
-import classes
 import data
-from Levels.Part_I import scripts as s
+import tools as t
+from . import scripts as s
+from Classes.Players import c_human, c_robot_random
 
 
 def run(gm):
     scr = gm.screen
-    player = classes.Human(gm, scr, data.PLAYER_NAME)
-    enemy = classes.RobotRandom(gm, scr, data.ROBOT_CALCULATOR_NAME)
+    player = c_human.Human(gm, scr, data.PLAYER_NAME)
+    enemy = c_robot_random.RobotRandom(gm, scr, data.ROBOT_CALCULATOR_NAME)
     hbar = data.HIGH_BARS["level_3"]
     embed_funcs = {
                    "anim_diceroll": scr.anim_diceroll,

@@ -1,7 +1,7 @@
 import time
 
 import data
-from Levels.Part_I import scripts as s
+from . import scripts as s
 
 
 def run(scr):
