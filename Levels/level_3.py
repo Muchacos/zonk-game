@@ -7,7 +7,7 @@ from Classes.Players import c_human, c_robot_random
 def run(gm):
     scr = gm.screen
     player = c_human.Human(gm, scr, data.PLAYER_NAME)
-    enemy = c_robot_random.RobotRandom(gm, scr, data.ROBOT_CALCULATOR_NAME)
+    enemy = c_robot_tactic.RobotTactic(gm, scr, data.ROBOT_CALCULATOR_NAME)
     hbar = data.HIGH_BARS["level_3"]
     embed_funcs = {
                    "anim_diceroll": scr.anim_diceroll,
